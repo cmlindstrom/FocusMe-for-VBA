@@ -215,6 +215,8 @@ Private Sub ts_Tasks_Change()
     Set tb = ts_Tasks.SelectedItem
     tabView = tb.Caption
     
+    If f_searchMode Then SetSearchMode False
+    
     RefreshView tabView
         
 End Sub
