@@ -1,10 +1,10 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} frm_TimeCard 
    Caption         =   "FME VBA - Timecard"
-   ClientHeight    =   6645
+   ClientHeight    =   6720
    ClientLeft      =   120
    ClientTop       =   465
-   ClientWidth     =   8370
+   ClientWidth     =   8775
    OleObjectBlob   =   "frm_TimeCard.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
@@ -28,17 +28,27 @@ Dim TimecardItems As TimeRecords
 
 Dim bFirstRendered As Boolean
 
+Public Enum enuTimecardGroupBy
+    Project = 1
+    Workspace = 5
+End Enum
+
+' - - Resizing
+Private WithEvents m_clsAnchors As CAnchors
+Attribute m_clsAnchors.VB_VarHelpID = -1
+
 ' Properties
 
 Dim f_startDate As Date
 Dim f_endDate As Date
+Dim f_groupBy As enuTimecardGroupBy
 
 ''' Form Title
-Public Property Let Title(ByVal strTitle As String)
+Public Property Let title(ByVal strTitle As String)
     Me.Caption = strTitle
 End Property
-Public Property Get Title() As String
-    Title = Me.Caption
+Public Property Get title() As String
+    title = Me.Caption
 End Property
 
 ''' Start date
@@ -57,6 +67,14 @@ Public Property Get endDate() As Date
     endDate = f_endDate
 End Property
 
+''' GroupBy
+Public Property Let groupBy(ByVal gb As Integer)
+    f_groupBy = gb
+End Property
+Public Property Get groupBy() As Integer
+    groupBy = f_groupBy
+End Property
+
 ' Event Handlers
 
 Private Sub btn_Refresh_Click()
@@ -65,6 +83,10 @@ End Sub
 
 Private Sub btn_Done_Click()
     Unload Me
+End Sub
+
+Private Sub btn_Export_Click()
+    ExportTimeRecords
 End Sub
 
 Private Sub dtp_EndDate_Click()
@@ -77,8 +99,8 @@ Private Sub dtp_EndDate_Click()
     
     Dim myDate As Date
     
-    Dim X As Integer
-    Dim Y As Integer
+    Dim x As Integer
+    Dim y As Integer
     
     'If frm_PickEndDate Is Nothing Then
     'End If
@@ -89,9 +111,9 @@ Private Sub dtp_EndDate_Click()
         .SelectedDate = f_endDate
         .MultiSelect = False
             
-        TryGetRelativePosition Me.txtbx_EndDate, X, Y
-        .Top = Y
-        .Left = X
+        TryGetRelativePosition Me.txtbx_EndDate, x, y
+        .Top = y
+        .Left = x
             
     End With
     
@@ -124,8 +146,8 @@ Private Sub dtp_StartDate_Click()
 '    If frm_PickStartDate Is Nothing Then
 '    End If
     
-    Dim X As Integer
-    Dim Y As Integer
+    Dim x As Integer
+    Dim y As Integer
 
     Set frm_PickStartDate = New frm_DatePicker
     With frm_PickStartDate
@@ -133,9 +155,9 @@ Private Sub dtp_StartDate_Click()
         .SelectedDate = f_startDate
         .MultiSelect = False
             
-        TryGetRelativePosition Me.txtbx_StartDate, X, Y
-        .Top = Y
-        .Left = X
+        TryGetRelativePosition Me.txtbx_StartDate, x, y
+        .Top = y
+        .Left = x
             
     End With
         
@@ -147,6 +169,19 @@ Private Sub dtp_StartDate_Click()
     
 ThrowException:
     LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
+Private Sub cmbobx_GroupBy_Change()
+    Dim sgb As String
+    sgb = LCase(cmbobx_GroupBy.text)
+    
+    If sgb = GetGroupByText(f_groupBy) Then
+        ' No change
+    Else
+        f_groupBy = GetGroupBy(sgb)
+        Refresh
+    End If
     
 End Sub
 
@@ -174,13 +209,31 @@ Private Sub chkbx_OnlyBusy_Change()
     
 End Sub
 
+' - Resizing
+
+Private Sub m_clsAnchors_Resizing()
+
+End Sub
+
+Private Sub m_clsAnchors_ResizingComplete()
+    Call ResizeLVColumns
+End Sub
 
 ' Constructor
 
 Private Sub UserForm_Initialize()
 
-    f_startDate = DateAdd(GetDatePartFormat(DateInterval.Day), -7, Now)
+    Me.title = "Timecard - " & Commands.AppName
+
+    f_startDate = DateAdd(GetDatePartFormat(DateInterval.day), -7, Now)
     f_endDate = Now
+    
+    f_groupBy = Project
+    
+    ' Initialize UI elements
+    Me.cmbobx_GroupBy.AddItem "Project"
+    Me.cmbobx_GroupBy.AddItem "Workspace"
+    Me.cmbobx_GroupBy.text = "Project"
     
     Set stgs = New Settings
     Set TimecardItems = New TimeRecords
@@ -188,9 +241,23 @@ Private Sub UserForm_Initialize()
     bFirstRendered = False
     Status
     
+    ' Set Resizing ability
+    Call SetAnchors
+           
+    ' Gather settings to the UI
+    SetUI
+    
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+    Set m_clsAnchors = Nothing
+    Set frm_PickStartDate = Nothing
+    Set frm_PickEndDate = Nothing
+    Set stgs = Nothing
 End Sub
 
 Private Sub UserForm_Terminate()
+    Set m_clsAnchors = Nothing
     Set frm_PickStartDate = Nothing
     Set frm_PickEndDate = Nothing
     Set stgs = Nothing
@@ -217,11 +284,24 @@ Public Sub Refresh()
                                 Me.chkbx_Include24Hr.value, _
                                 Me.chkbx_OnlyBusy.value)
     
-    strTrace = "Found " & TimecardItems.Count & " time records..."
-    Status strTrace
+    Status "Analyzing records..."
+    
+    Dim gb As enuTimecardGroupBy
+    gb = Project
+    Dim sgb As String
+    sgb = LCase(cmbobx_GroupBy.text)
+    Select Case sgb
+        Case "project"
+            gb = Project
+        Case "workspace"
+            gb = Workspace
+    End Select
     
     Dim dt As DataTable
-    Set dt = TimecardItems.Analyze("Timecard", True, , True, True, False)
+    Set dt = TimecardItems.Analyze("Timecard", gb, True, , True, True, True)
+    
+    strTrace = "Found " & TimecardItems.Count & " time records in " & (dt.rows.Count - 2) & " groups"
+    Status strTrace
     
     RefreshListView dt
     
@@ -247,6 +327,59 @@ Private Sub SetUI()
 
 End Sub
 
+Private Sub SetAnchors()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SetAnchors"
+
+    On Error GoTo ThrowException
+    
+        ' Set up for Resizable form
+    Set m_clsAnchors = New CAnchors
+    
+    Set m_clsAnchors.Parent = Me
+    
+    ' restrict minimum size of userform
+    m_clsAnchors.MinimumWidth = 430.5
+    m_clsAnchors.MinimumHeight = 365.25
+    
+        ' Set Anchors
+    With m_clsAnchors
+    
+        ' ListView
+        .Anchor("lv_Timecard").AnchorStyle = enumAnchorStyleTop Or enumAnchorStyleLeft Or _
+                                             enumAnchorStyleRight Or enumAnchorStyleBottom
+        
+        ' Checkboxes
+        .Anchor("chkbx_OnlyBusy").AnchorStyle = enumAnchorStyleLeft Or enumAnchorStyleBottom
+        .Anchor("chkbx_Include24Hr").AnchorStyle = enumAnchorStyleLeft Or enumAnchorStyleBottom
+        
+        ' Start Date
+        .Anchor("txtbx_StartDate").AnchorStyle = enumAnchorStyleTop Or enumAnchorStyleLeft
+        .Anchor("dtp_StartDate").AnchorStyle = enumAnchorStyleTop Or enumAnchorStyleLeft
+                
+        ' End Date
+        .Anchor("txtbx_EndDate").AnchorStyle = enumAnchorStyleTop Or enumAnchorStyleLeft
+        .Anchor("dtp_EndDate").AnchorStyle = enumAnchorStyleTop Or enumAnchorStyleLeft
+    
+        ' Buttons
+        .Anchor("btn_Done").AnchorStyle = enumAnchorStyleBottom Or enumAnchorStyleRight
+        .Anchor("btn_Export").AnchorStyle = enumAnchorStyleBottom Or enumAnchorStyleRight
+        .Anchor("btn_Refresh").AnchorStyle = enumAnchorStyleTop Or enumAnchorStyleRight
+        
+        ' Status
+        .Anchor("sb_Status").AnchorStyle = enumAnchorStyleLeft Or enumAnchorStyleBottom Or enumAnchorStyleRight
+        
+    End With
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
 Private Sub SetStartDate(ByVal dte As Date)
     Me.txtbx_StartDate.text = Format(dte, "mm/dd/yyyy")
 End Sub
@@ -254,6 +387,58 @@ End Sub
 Private Sub SetEndDate(ByVal dte As Date)
     Me.txtbx_EndDate.text = Format(dte, "mm/dd/yyyy")
 End Sub
+
+Private Function GetGroupByText(ByVal gb As enuTimecardGroupBy) As String
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetGroupByText"
+    
+    On Error GoTo ThrowException
+    
+    Select Case gb
+        Case enuTimecardGroupBy.Project
+            strTrace = "Project"
+        Case enuTimecardGroupBy.Workspace
+            strTrace = "Workspace"
+    End Select
+    
+    GetGroupByText = strTrace
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    GetGroupByText = ""
+    
+End Function
+
+Private Function GetGroupBy(ByVal strGB As String) As enuTimecardGroupBy
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetGroupBy"
+    
+    On Error GoTo ThrowException
+    
+    Dim gb As enuTimecardGroupBy
+    
+    strTrace = LCase(strGB)
+    Select Case strTrace
+        Case "project"
+            gb = Project
+        Case "workspace"
+            gb = Workspace
+            
+    End Select
+    
+    GetGroupBy = gb
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    GetGroupBy = 0
+
+End Function
 
 Private Sub Status(Optional ByVal msg As String = "")
     Me.sb_Status.SimpleText = msg
@@ -272,7 +457,7 @@ Private Sub RefreshListView(ByVal dt As DataTable)
         strTrace = "No columns found in the dataTable."
         GoTo ThrowException
     End If
-    If dt.Rows.Count = 0 Then
+    If dt.rows.Count = 0 Then
         strTrace = "An empty table encountered."
         GoTo ThrowException
     End If
@@ -307,8 +492,8 @@ Private Sub RefreshListView(ByVal dt As DataTable)
     
     ' Load ListView
     Dim dr As DataRow
-    For i = 1 To dt.Rows.Count - 1
-        Set dr = dt.Rows.Items(i)
+    For i = 1 To dt.rows.Count - 1
+        Set dr = dt.rows.Items(i)
         AddListViewItem dr
     Next
     
@@ -380,12 +565,21 @@ Private Sub ResizeLVColumns()
     colWidth = GetMaxNameSize()
     lv_TimeCard.ColumnHeaders(1).Width = colWidth
     
+    ' Get Time columns possible width
+    Dim timeW As Integer
+    timeW = Me.Width - colWidth
+    Dim timeCW As Integer
+    timeCW = CInt(timeW / (lv_TimeCard.ColumnHeaders.Count - 1))
+    
     ' Adjust remaining columns to minimum widths
     Dim i As Integer
+    Dim cw As Integer
     With lv_TimeCard
         If .ColumnHeaders.Count > 1 Then
             For i = 2 To .ColumnHeaders.Count
-                .ColumnHeaders(i).Width = MeasureString(.ColumnHeaders(i).text, .font)
+                cw = MeasureString(.ColumnHeaders(i).text, .font)
+                If cw < timeCW Then cw = timeCW
+                .ColumnHeaders(i).Width = cw
             Next
         End If
     End With
@@ -433,7 +627,7 @@ End Function
 
 
 Private Function TryGetRelativePosition(ByVal ctrl As control, _
-                                         ByRef X As Integer, ByRef Y As Integer, _
+                                         ByRef x As Integer, ByRef y As Integer, _
                                     Optional ByVal sp As Integer = 0) As Boolean
                                          
     Dim strTrace As String
@@ -470,8 +664,8 @@ Private Function TryGetRelativePosition(ByVal ctrl As control, _
     tY = Me.Top
     
     ' Return position aligned to the left and under the specified control
-    X = tX + ctrl.Left  '(Me.Width / 2)
-    Y = tY + ctrl.Top + titleBarHeight + ctrl.Height ' (Me.Height / 2)
+    x = tX + ctrl.Left  '(Me.Width / 2)
+    y = tY + ctrl.Top + titleBarHeight + ctrl.Height ' (Me.Height / 2)
     
     '  Assume starts in center of application screen
     TryGetRelativePosition = True
@@ -482,3 +676,33 @@ ThrowException:
     TryGetRelativePosition = False
 End Function
 
+
+Private Sub ExportTimeRecords()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":ExportTimeRecords"
+    
+    On Error GoTo ThrowException
+    
+    ' Set the File path
+    Dim strFilePath As String
+    
+    strTrace = BrowseFolderEx("Select an Windows folder for the exported file: 'export.csv'")
+    If Len(strTrace) > 0 Then
+        ' Creat the path
+        strFilePath = strTrace & "\export.csv"
+        ' Export the records to the specified file path
+        Call TimecardItems.Export(strFilePath)
+    Else
+        strTrace = "Canceled the export."
+    End If
+    
+    ' strFilePath = "C:\Users\chris.m.lindstrom\Desktop\export.csv"
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub

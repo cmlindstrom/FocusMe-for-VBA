@@ -15,7 +15,7 @@ Attribute VB_Name = "Commands"
 
     Public Enum enuLinkStrategy
         None = 0
-        Text = 1        ' Copies ObjIn's text into ObjOut
+        text = 1        ' Copies ObjIn's text into ObjOut
         embed = 2       ' Embeds ObjIn into ObjOut
         multiple = 3    ' Copies ObjIn's attachments only
         referenced = 4  ' Creates a reference Id, linking the object's together
@@ -36,6 +36,7 @@ Attribute VB_Name = "Commands"
         itemType = 10
         Class = 11
         Calendar = 12
+        LastName = 13
     End Enum
 
     Public Enum enuSortDirection
@@ -114,7 +115,13 @@ Attribute VB_Name = "Commands"
     ' Public Const DestinationFolder As String = "\\chris@ceptara.net\Archive"
     ' Public Const ShowTaskWindowOnStartup As Boolean = True
     
+' VBA: Sub OnAction(control As IRibbonControl, byRef CancelDefault)
+    
 ''' Ribbon Callbacks
+
+    Public Sub MyRibbonStartup(ByVal ribbonUI As Office.IRibbonUI)
+        LogMessage "Ribbon callback worked.", "Commands:MyRibbonStartup"
+    End Sub
 
     ''' Returns True if one item in the selected collection is an Outlook.MailItem
     Public Function IsMailItemSelected(ByVal control As Office.IRibbonControl) As Boolean
@@ -213,9 +220,11 @@ Finally:
     Public Sub ForwardWithTracker()
         MsgBox "Set up a Forward message with a tracking task."
     End Sub
+    
+
 
     ''' Defers the selected item to a task and moves
-    ''' the origination item to the Project or Destination Folder
+    ''' the originating item to the Project or Destination Folder
     Public Sub DeferToTask()
     
         Dim strTrace As String
@@ -254,7 +263,18 @@ Finally:
             
             ' Move the incoming Item if setting True
             If stgs.AutoMove Then
-                If stgs.MoveOnDeferToTask Then ut.MoveToArchive myItem
+                If stgs.MoveOnDeferToTask Then
+                    If stgs.IgnoreSentMailMove Then
+                        If ut.IsItemParent(myItem, "Sent Items") Then
+                            strTrace = "Ignoring the move request."
+                            LogMessage strTrace, strRoutine
+                        Else
+                            ut.MoveToArchive myItem
+                        End If
+                    Else
+                        ut.MoveToArchive myItem
+                    End If
+                End If
             End If
                  
         Else
@@ -300,9 +320,20 @@ ThrowException:
             oAppt.Display
             
             If stgs.AutoMove Then
-                If stgs.MoveOnDeferToAppt Then ut.MoveToArchive myItem
+                If stgs.MoveOnDeferToAppt Then
+                    If stgs.IgnoreSentMailMove Then
+                        If ut.IsItemParent(myItem, "Sent Items") Then
+                            strTrace = "Ignoring the move request."
+                            LogMessage strTrace, strRoutine
+                        Else
+                            ut.MoveToArchive myItem
+                        End If
+                    Else
+                        ut.MoveToArchive myItem
+                    End If
+                End If
             End If
-                 
+            
         Else
             strTrace = "Converting a collection of incoming Outlook Items to an appointment is not supported, " & _
                         "please select one outlook item and try again."
@@ -337,6 +368,46 @@ ThrowException:
     
     End Sub
     
+    ''' Creates a linked mailItem from a selected
+    ''' task.
+    Public Sub MessageTask()
+       
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":MessageTask"
+        
+        On Error GoTo ThrowException
+        
+        Dim myCollection As Outlook.Selection
+        Set myCollection = ThisOutlookSession.Selection
+        
+        Dim ut As New Utilities
+      
+        If myCollection.Count = 0 Then
+            strTrace = "No incoming item found."
+            GoTo ThrowException
+        ElseIf myCollection.Count = 1 Then
+            Set myItem = ThisOutlookSession.CurrentItem
+            Dim oMail As Outlook.MailItem
+            Set oMail = ut.GetMessageForTask(myItem)
+            If Not oMail Is Nothing Then oMail.Display
+        Else
+            For i = 1 To myCollection.Count
+                Set myItem = myCollection(i)
+                ut.MoveToArchive myItem
+            Next i
+        End If
+        
+        GoTo Finally
+          
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+    
+Finally:
+    
+    End Sub
+    
     ''' Files the selected mail item into the item's project folder
     ''' or destination folder
     Public Sub FileInFolder()
@@ -366,10 +437,13 @@ ThrowException:
             Next i
         End If
         
-        Exit Sub
+        GoTo Finally
           
 ThrowException:
         LogMessage strTrace, strRoutine
+        
+Finally:
+        Set ut = Nothing
     
     End Sub
     

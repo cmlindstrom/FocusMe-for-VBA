@@ -147,14 +147,14 @@ Private Declare PtrSafe Function SetParent Lib "user32" ( _
     ByVal hWndNewParent As Long) As Long
     
 Private Declare PtrSafe Function GetParent Lib "user32" ( _
-    ByVal hwnd As Long) As Long
+    ByVal Hwnd As Long) As Long
 
 Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" ( _
     ByVal lpClassName As String, _
     ByVal lpWindowName As String) As Long
     
 Private Declare PtrSafe Function MoveWindow Lib "user32.dll" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal x As Long, _
     ByVal y As Long, _
     ByVal nWidth As Long, _
@@ -162,30 +162,30 @@ Private Declare PtrSafe Function MoveWindow Lib "user32.dll" ( _
     ByVal bRepaint As Long) As Long
     
 Private Declare PtrSafe Function GetWindow Lib "user32" _
-  (ByVal hwnd As Long, _
+  (ByVal Hwnd As Long, _
    ByVal wCmd As Long) As Long
    
 Private Declare PtrSafe Function GetWindowRect Lib "user32.dll" _
-                                (ByVal hwnd As Long, _
+                                (ByVal Hwnd As Long, _
                                  ByRef lpRect As RECT) As Long
   
 Private Declare PtrSafe Function GetDesktopWindow Lib "user32" () As Long
 
 Private Declare PtrSafe Function GetWindowThreadProcessId Lib "user32" _
-  (ByVal hwnd As Long, _
+  (ByVal Hwnd As Long, _
    lpdwProcessId As Long) As Long
     
 Private Declare PtrSafe Function GetWindowLong Lib "user32" Alias "GetWindowLongA" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal nIndex As Long) As Long
 
 Private Declare PtrSafe Function SetWindowLong Lib "user32" Alias "SetWindowLongA" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal nIndex As Long, _
     ByVal dwNewLong As Long) As Long
     
 Private Declare PtrSafe Function SetLayeredWindowAttributes Lib "user32" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal crey As Byte, _
     ByVal bAlpha As Byte, _
     ByVal dwFlags As Long) As Long
@@ -199,13 +199,13 @@ Private Declare PtrSafe Function FindWindowEx Lib "user32" Alias "FindWindowExA"
 Private Declare PtrSafe Function GetActiveWindow Lib "user32" () As Long
 
 Private Declare PtrSafe Function DrawMenuBar Lib "user32" ( _
-    ByVal hwnd As Long) As Long
+    ByVal Hwnd As Long) As Long
 
 Private Declare PtrSafe Function GetMenuItemCount Lib "user32" ( _
     ByVal hMenu As Long) As Long
 
 Private Declare PtrSafe Function GetSystemMenu Lib "user32" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal bRevert As Long) As Long
     
 Private Declare PtrSafe Function RemoveMenu Lib "user32" ( _
@@ -214,19 +214,19 @@ Private Declare PtrSafe Function RemoveMenu Lib "user32" ( _
     ByVal wFlags As Long) As Long
     
 Private Declare PtrSafe Function GetWindowText Lib "user32" Alias "GetWindowTextA" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal lpString As String, _
     ByVal cch As Long) As Long
     
 Private Declare PtrSafe Function SetWindowText Lib "user32" Alias "SetWindowTextA" ( _
-    ByVal hwnd As Long, ByVal _
+    ByVal Hwnd As Long, ByVal _
     lpString As String) As Long
     
 Private Declare PtrSafe Function GetWindowTextLength Lib "user32" Alias "GetWindowTextLengthA" ( _
-    ByVal hwnd As Long) As Long
+    ByVal Hwnd As Long) As Long
 
 Private Declare PtrSafe Function GetClassName Lib "user32" Alias "GetClassNameA" ( _
-    ByVal hwnd As Long, _
+    ByVal Hwnd As Long, _
     ByVal lpClassName As String, _
     ByVal nMaxCount As Long) As Long
 
@@ -235,10 +235,10 @@ Private Declare PtrSafe Function EnableMenuItem Lib "user32" ( _
     ByVal wIDEnableItem As Long, _
     ByVal wEnable As Long) As Long
     
-Private Declare PtrSafe Function BringWindowToTop Lib "user32" (ByVal hwnd As Long) As Long
+Private Declare PtrSafe Function BringWindowToTop Lib "user32" (ByVal Hwnd As Long) As Long
 
 Private Declare PtrSafe Function SendMessage Lib "user32" Alias "SendMessageA" _
-  (ByVal hwnd As Long, ByVal wMsg As Long, ByVal wParam As Long, lParam As Any) As Long
+  (ByVal Hwnd As Long, ByVal wMsg As Long, ByVal wParam As Long, lParam As Any) As Long
 
 Private Declare PtrSafe Function SendInput Lib "user32.dll" ( _
     ByVal nInputs As Long, _
@@ -524,6 +524,47 @@ ThrowException:
 
 End Sub
 
+''' Sets the Position of any Windows Form based on its handle
+Public Function SetWindowPosition(ByVal Hwnd As Long, ByVal x As Long, ByVal y As Long) As Boolean
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SetWindowPosition"
+    
+    On Error GoTo ThrowException
+    
+    If Hwnd <= 0 Then
+        strTrace = "Invalid windows handle: " & Hwnd
+        GoTo ThrowException
+    End If
+    
+    ' Get the current position and size of the specified window
+    Dim lr As RECT
+    Call GetWindowRect(Hwnd, lr)
+    
+    Dim w As Integer
+    Dim h As Integer
+    w = lr.Right - lr.Left
+    h = lr.Bottom - lr.Top
+    
+    ' Move the window to the new origin coordinates
+    Dim bWorked As Long
+    bWorked = MoveWindow(Hwnd, x, y, w, h, 1)
+    If Not bWorked Then
+        strTrace = "Failed to move the window to (" & x & "," & y & ") w=" & w & " h=" & h
+        GoTo ThrowException
+    End If
+    
+    SetWindowPosition = bWorked
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    SetWindowPosition = False
+
+End Function
+
+''' Sets the Position of a UserForm
 Public Function SetFormPosition(ByVal UF As MSForms.UserForm, _
                                 ByVal x As Long, ByVal y As Long) As Boolean
 
@@ -547,23 +588,10 @@ Public Function SetFormPosition(ByVal UF As MSForms.UserForm, _
         GoTo ThrowException
     End If
     
-    ' Get the current position and size of the specified window
-    Dim lr As RECT
-    Call GetWindowRect(UFHWnd, lr)
+    Dim bWorked As Boolean
+    bWorked = SetWindowPosition(UFHWnd, x, y)
     
-    Dim w As Integer
-    Dim h As Integer
-    w = lr.Right - lr.Left
-    h = lr.Bottom - lr.Top
-    
-    ' Move the window to the new origin coordinates
-    Dim bWorked As Long
-    bWorked = MoveWindow(UFHWnd, x, y, w, h, 1)
-    If Not bWorked Then
-        strTrace = "Failed to move the window to (" & x & "," & y & ") w=" & w & " h=" & h
-        GoTo ThrowException
-    End If
-    
+    SetFormPosition = bWorked
     Exit Function
     
 ThrowException:
@@ -615,8 +643,8 @@ GoTo SkipOut
 Select Case Parent
     Case FORM_PARENT_APPLICATION
         Dim l As Long
-        l = Application.hwnd
-        r = SetParent(UFHWnd, Application.hwnd)
+        l = Application.Hwnd
+        r = SetParent(UFHWnd, Application.Hwnd)
     Case FORM_PARENT_NONE
         r = SetParent(UFHWnd, 0&)
     Case FORM_PARENT_WINDOW
@@ -920,6 +948,31 @@ If Res = 0 Then
 End If
 
 SetFormOpacity = True
+
+End Function
+
+''' Returns the Windows handle to a user form based on its caption
+Function GetUserFormHandle(ByVal Caption As String) As Long
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetUserFormHandle"
+    
+    On Error GoTo ThrowException
+
+    Dim UFHWnd As Long
+    UFHWnd = FindWindow(C_USERFORM_CLASSNAME, Caption)
+    If UFHWnd = 0 Then
+        strTrace = "Failed to find a user form using caption: " & Caption
+        GoTo ThrowException
+    End If
+    
+    GetUserFormHandle = UFHWnd
+    Exit Function
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    GetUserFormHandle = -1
 
 End Function
 

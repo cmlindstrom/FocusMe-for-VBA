@@ -17,10 +17,12 @@ Private Const collectionNames As String = "Project,Workspace,Focus"
 
 ''' Property internal variables
 Dim f_source As String
-Dim f_name As String
+Dim f_Name As String
 
 Dim f_lastSaved As Date
 Dim f_lastTouched As Date
+
+Dim f_isConnected As Boolean
 
 Dim dsInternal As DataSet
 
@@ -35,7 +37,7 @@ Public Event ItemDeleted()
 
 ''' the name part of a file to the xml file path
 Public Property Get Name() As String
-    Name = f_name
+    Name = f_Name
 End Property
 
 ''' The file where the DataSet is saved
@@ -61,6 +63,12 @@ End Property
 Private Sub Class_Initialize()
     ' Create a DataSet
     Set dsInternal = New DataSet
+    
+    ' Initialize properties
+    f_isConnected = False
+    f_lastSaved = #1/1/1970#
+    f_lastTouched = #1/1/1970#
+    
 End Sub
 
 ' - Methods
@@ -70,14 +78,14 @@ Public Sub Connect(Optional ByVal dsName As String = "")
 
     If Len(dsName) = 0 Then dsName = "Default"
 
-    f_name = CleanFileName(dsName)
+    f_Name = CleanFileName(dsName)
     
-    Dim Path As String
-    Path = GetAppDataPath()
-    f_name = dsName
-    f_source = Path & "\" & f_name & ".xml"
+    Dim path As String
+    path = GetAppDataPath()
+    f_Name = dsName
+    f_source = path & "\" & f_Name & ".xml"
     
-    LoadfromFile f_source
+    LoadfromFile f_source ' sets the isConnected flag
     
 End Sub
 
@@ -99,6 +107,12 @@ Public Sub SetConnection(ByVal fullFilePath As String)
     
 End Sub
 
+''' Returns a flag representing that a file has been loaded
+''' into the internal DataSet
+Public Function IsConnected() As Boolean
+    IsConnected = f_isConnected
+End Function
+
 ''' Commits any in-memory changes to the Source
 Public Sub AcceptChanges()
     SaveToFile f_source
@@ -108,6 +122,36 @@ Public Sub Disconnect()
     ' Save to xml file
     SaveToFile f_source
 End Sub
+
+''' Returns True if the DataStore has been set up
+Public Function DataStoreExists(Optional ByVal fullPath As String = "") As Boolean
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":DataStoreExists"
+
+    Dim bReturn As Boolean
+    bReturn = False
+       
+    On Error GoTo ThrowException
+
+    If Len(fullPath) = 0 Then fullPath = f_source
+    
+    If Len(fullPath) = 0 Then
+        strTrace = "Method called without an assigned DataStore storage file."
+        GoTo ThrowException
+    End If
+    
+    bReturn = FileExists(fullPath)
+
+    DataStoreExists = bReturn
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    DataStoreExists = False
+
+End Function
 
 ' - - Item Management
 
@@ -203,7 +247,7 @@ Public Function Insert(ByVal obj As Object, ByVal tblName As String) As Boolean
     For Each s In props
         dr.Add s, GetProperty(obj, s)
     Next
-    dt.Rows.AddRow dr
+    dt.rows.AddRow dr
     
     strTrace = "Capture activity timestamp."
     f_lastTouched = Now
@@ -251,20 +295,27 @@ Public Function Update(ByVal obj As Object, ByVal tblName As String) As Boolean
         GoTo ThrowException
     End If
     
+    strTrace = "Get the object's property names."
+    Dim props() As String
+    props = obj.GetListOfProperties
+    
+    strTrace = "Check columns & update column collection - if needed."
+    Dim s As Variant
+    For Each s In props
+        If Not dt.Columns.IsColumnExist(s) Then
+            dt.Columns.Add s
+        End If
+    Next
+    
     strTrace = "Locate the item of interest."
     Dim drUpdate As DataRow
-    Set drUpdate = dt.Rows.GetByColumnValue("id", myId)
+    Set drUpdate = dt.rows.GetByColumnValue("id", myId)
     If drUpdate Is Nothing Then
         strTrace = "Failed to locate the item in the collection, id: " & myId
         GoTo ThrowException
     End If
     
-    strTrace = "Get the object's property names."
-    Dim props() As String
-    props = obj.GetListOfProperties
-    
     strTrace = "Update the dataRow values."
-    Dim s As Variant
     For Each s In props
         If Not s = "id" Then
             strTrace = "Updating property: " & s & "."
@@ -353,14 +404,14 @@ Public Function Remove(ByVal id As String, ByVal tblName As String) As Boolean
     
     strTrace = "Locate the item of interest."
     Dim drRemove As DataRow
-    Set drRemove = dt.Rows.GetByColumnValue("id", id)
+    Set drRemove = dt.rows.GetByColumnValue("id", id)
     If drRemove Is Nothing Then
         strTrace = "Failed to locate the item in the collection, id: " & id
         GoTo ThrowException
     End If
     
     strTrace = "Remove it from the collection."
-    dt.Rows.Remove drRemove
+    dt.rows.Remove drRemove
 
     Remove = True
     Exit Function
@@ -399,7 +450,7 @@ Public Function GetItemById(ByVal id As String, ByVal tblName As String) As Obje
     
     strTrace = "Locate the item of interest."
     Dim dr As DataRow
-    Set dr = dt.Rows.GetByColumnValue("id", id)
+    Set dr = dt.rows.GetByColumnValue("id", id)
     If dr Is Nothing Then
         strTrace = "Failed to locate the item in the collection, id: " & id
         GoTo ThrowException
@@ -426,6 +477,68 @@ ThrowException:
     LogMessageEx strTrace, err, strRoutine
     Set GetItemById = Nothing
     
+End Function
+
+''' Gets an item from the dataStore, typed to the originating Table
+Public Function GetItemByProperty(ByVal tblName As String, _
+                                  ByVal propName As String, ByVal propValue As Variant) As Object
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetItemByProperty"
+
+    If Len(propName) = 0 Then
+        strTrace = "Property name is missing."
+        GoTo ThrowException
+    End If
+    If Len(propValue) = 0 Then
+        strTrace = "Property value is missing."
+        GoTo ThrowException
+    End If
+    If Len(tblName) = 0 Then
+        strTrace = "Table name not specified."
+        GoTo ThrowException
+    End If
+    
+    On Error GoTo ThrowException
+
+    strTrace = "Find the table in the dataSet."
+    Dim dt As DataTable
+    Set dt = dsInternal.GetTableByName(tblName)
+    If dt Is Nothing Then
+        strTrace = "Failed to find the referenced table: " & tblName
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Locate the item of interest."
+    Dim dr As DataRow
+    Set dr = dt.rows.GetByColumnValue(propName, propValue)
+    If dr Is Nothing Then
+        strTrace = "Failed to locate the item in the collection, " & propName & ": " & propValue
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Create an object instance from the dataRow values."
+    Dim obj As Object
+    Set obj = CreateNewObject(tblName)
+    
+    strTrace = "Get the object's property names."
+    Dim props() As String
+    props = obj.GetListOfProperties
+    
+    strTrace = "Retrieve the dataRow values."
+    Dim s As Variant
+    For Each s In props
+        SetProperty obj, s, dr.GetItem(s)
+    Next
+    
+    Set GetItemByProperty = obj
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetItemByProperty = Nothing
+
 End Function
 
 ' - - Collections
@@ -459,10 +572,14 @@ Public Function GetEntireCollection(ByVal collName As String) As ArrayList
     strTrace = "Retrieve the table rows."
     Dim dr As DataRow
     Dim obj As Object
-    For Each dr In dt.Rows.Items
+    For Each dr In dt.rows.Items
     
         strTrace = "Create an object instance from the dataRow values."
         Set obj = CreateNewObject(collName)
+        If obj Is Nothing Then
+            strTrace = "Unable to create a new object - see error log for guidance."
+            GoTo ThrowException
+        End If
     
         strTrace = "Get the object's property names."
         Dim props() As String
@@ -506,7 +623,7 @@ Public Sub ClearEntireCollection(ByVal collName As String)
     End If
     
     strTrace = "Clear the Rows from the table."
-    Call dt.Rows.Clear
+    Call dt.rows.Clear
         
     Exit Sub
     
@@ -518,7 +635,7 @@ End Sub
 ''' Returns objects within the specified collection that are not marked as deleted.
 ''' A filter can be specified to further narrow the returned collection
 Public Function GetCollection(ByVal collName As String, _
-                    Optional ByVal filter As String = "") As ArrayList
+                    Optional ByVal Filter As String = "") As ArrayList
                     
     Dim strTrace As String
     Dim strRoutine As String
@@ -536,7 +653,7 @@ Public Function GetCollection(ByVal collName As String, _
     
     Dim tmpColl As ArrayList
     Dim obj As Object
-    If Len(filter) = 0 Then
+    If Len(Filter) = 0 Then
         Set tmpColl = GetEntireCollection(collName)
         If IsNothing(tmpColl) Then
             strTrace = "Collection query failed."
@@ -594,8 +711,29 @@ End Function
 
 ' - Supporting Methods
 
+''' Loads the internal dataSet from a specific file
 Private Sub LoadfromFile(ByVal fullPath As String)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":LoadfromFile"
+    
+    If Not FileExists(fullPath) Then
+        strTrace = "File path: '" & fullPath & "' does not exists, aborting file load."
+        GoTo ThrowException
+    End If
+    
+    On Error GoTo ThrowException
+    
     dsInternal.ReadXmlFile fullPath
+    
+    f_isConnected = True
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
 End Sub
 
 Private Sub SaveToFile(ByVal fullPath As String)
@@ -626,6 +764,8 @@ Private Function CreateNewObject(ByVal tblName As String) As Object
             Set objReturn = New fmeFolder
         Case "mail"
             Set objReturn = New fmeMailItem
+        Case "workspace"
+            Set objReturn = New fmeWorkspace
         Case Else
             strTrace = "Table name not recognized: " & tblName
             GoTo ThrowException

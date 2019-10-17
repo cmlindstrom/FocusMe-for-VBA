@@ -85,7 +85,7 @@ End Sub
         If oMe Is Nothing And Not oExUser Is Nothing Then
             Set oMe = app.CreateItem(olContactItem)
             With oExUser
-                oMe.FileAs = .name
+                oMe.FileAs = .Name
                 oMe.FirstName = .FirstName
                 oMe.LastName = .LastName
                 oMe.FullName = .FirstName & " " & .LastName
@@ -160,7 +160,7 @@ ThrowException:
         Set olCategories = oNS.Categories
         If olCategories.Count > 0 Then
             For Each olCategory In olCategories
-                If LCase(olCategory.name) = LCase(CategoryName) Then
+                If LCase(olCategory.Name) = LCase(CategoryName) Then
                     vRetVal = CStr(olCategory.CategoryID)
                     Exit For
                 End If
@@ -229,7 +229,7 @@ ThrowException:
     ''' <returns>String: Category ID in the MCL</returns>
     ''' <remarks></remarks>
     Public Function UpdateMCL(ByVal mclId As String, _
-                            ByVal name As String, _
+                            ByVal Name As String, _
                             ByVal Color As Integer) As String
     
         Dim strTrace As String
@@ -250,11 +250,13 @@ ThrowException:
 
         ' There seems to be some issue with updating the name of an MCL name, therefore
         ' need to remove and add versus simply updating the specified category
+        
+        strTrace = "Processing category '" & Name & "' for id: " & mclId & "."
 
         If oNS.Categories.Count > 0 Then
-            For Each olCategory In olNS.Categories
+            For Each olCategory In oNS.Categories
                 If olCategory.CategoryID = mclId Then
-                    If (olCategory.name = name) And _
+                    If (olCategory.Name = Name) And _
                             (olCategory.Color = Color) Then
                         ' Nothing changed
                         bretVal = olCategory.CategoryID
@@ -267,13 +269,13 @@ ThrowException:
                 End If
             Next
                 
-            Set olCategory = oNS.Categories.Add(name, Color)
+            Set olCategory = oNS.Categories.Add(Name, Color)
             bretVal = olCategory.CategoryID
             If bFound Then
-                strTrace = "Updated the current category for '" & name & "'."
+                strTrace = "Updated the current category for '" & Name & "'."
                 LogMessage strTrace, strRoutine
             Else
-                strTrace = "Added a new category for '" & name & "'."
+                strTrace = "Added a new category for '" & Name & "'."
                 LogMessage strTrace, strRoutine
             End If
         
@@ -313,7 +315,7 @@ ThrowException:
 
         If oNS.Categories.Count > 0 Then
             For Each olCategory In oNS.Categories
-                If LCase(CategoryName) = LCase(olCategory.name) Then
+                If LCase(CategoryName) = LCase(olCategory.Name) Then
                     oNS.Categories.Remove olCategory.CategoryID
                     Exit For
                 End If
@@ -618,14 +620,14 @@ ThrowException:
         Set oRootFolder = inbox.Parent
         If Not IsNothing(oRootFolder) Then
         
-            If Len(oRootFolder.name) > 0 Then
-                strTrace = "Evaluating folder: " & oRootFolder.name & " in store: " & oStore.DisplayName
+            If Len(oRootFolder.Name) > 0 Then
+                strTrace = "Evaluating folder: " & oRootFolder.Name & " in store: " & oStore.DisplayName
                 LogMessage strTrace, strRoutine
         
                 Set retFldrs = SearchFolderByName(oRootFolder, strFolderName)
             Else
             
-                strTrace = "Evaluating folder: " & oRootFolder.name & " in store: " & oStore.DisplayName
+                strTrace = "Evaluating folder: " & oRootFolder.Name & " in store: " & oStore.DisplayName
                 LogMessage strTrace, strRoutine
         
                 Set retFldrs = SearchFolderByName(oRootFolder, strFolderName)
@@ -643,7 +645,7 @@ ThrowException:
     ''' Recurses the Folder tree, starting with the specified Outlook.Folder
     ''' collecting any folders with a name that matches the specified name
     Public Function SearchFolderByName(ByVal myFolder As Outlook.Folder, _
-                                       ByVal name As String) As Collection
+                                       ByVal Name As String) As Collection
                                        
         Dim strTrace As String
         strTrace = "General Fault."
@@ -668,12 +670,12 @@ ThrowException:
 
         If myFolder.Folders.Count > 0 Then
             ' Start search at the top of the hierarchy
-            srcName = UCase(name)
+            srcName = UCase(Name)
             For Each f In myFolder.Folders
             
                 ' Check for 'special' folders
-                If Contains("COMMON_VIEWS", UCase(f.name)) Then
-                    strTrace = "Reserved Folder, ignoring: " & f.name & "."
+                If Contains("COMMON_VIEWS", UCase(f.Name)) Then
+                    strTrace = "Reserved Folder, ignoring: " & f.Name & "."
                     LogMessage strTrace, strRoutine
                     GoTo SkipFolder1
                 End If
@@ -684,17 +686,17 @@ ThrowException:
                     LogMessage strTrace, strRoutine
                     GoTo SkipFolder1
                 End If
-                If Len(f.name) = 0 Then
+                If Len(f.Name) = 0 Then
                     strTrace = "Invalid folder encountered, no NAME."
                     LogMessage strTrace, strRoutine
                     GoTo SkipFolder1
                 End If
                                                 
                 ' Make case insensitive
-                strTrace = "Evaluating folder: " & f.name
+                strTrace = "Evaluating folder: " & f.Name
                 LogMessage strTrace, strRoutine
                 
-                tgtName = UCase(f.name)
+                tgtName = UCase(f.Name)
                 
                 ' Check the folder path
                 Dim pathName As String
@@ -706,7 +708,7 @@ ThrowException:
                 strTrace = "Look to see if current folder has sub-folders."
                 If f.Folders.Count > 0 Then
                     Dim fldrs As Collection
-                    Set fldrs = SearchFolderByName(f, name)
+                    Set fldrs = SearchFolderByName(f, Name)
                     If Not IsNothing(fldrs) And fldrs.Count > 0 Then
                         For Each fd In fldrs
                             retFldrs.Add (fd)
@@ -718,10 +720,10 @@ ThrowException:
 SkipFolder1:
             Next
         Else
-            strTrace = "Evaluating folder: " & myFolder.name
+            strTrace = "Evaluating folder: " & myFolder.Name
             ' Make case insensitive
-            strTrace = "Evaluating folder: " & myFolder.name
-            tgtName = UCase(myFolder.name)
+            strTrace = "Evaluating folder: " & myFolder.Name
+            tgtName = UCase(myFolder.Name)
             
             strTrace = "Looking for: " & srcName & " in folder: " & myFolder.FolderPath
             LogMessage strTrace, strRoutine
@@ -805,7 +807,7 @@ ThrowException:
         Set oRootFolder = inbox.Parent
         If Not IsNothing(oRootFolder) Then
         
-            strTrace = "Evaluating folder: " & oRootFolder.name & " in store: " & oStore.DisplayName
+            strTrace = "Evaluating folder: " & oRootFolder.Name & " in store: " & oStore.DisplayName
             LogMessage strTrace, strRoutine
         
             Set retColl = IndexFoldersWithParent(oRootFolder)
@@ -815,7 +817,7 @@ ThrowException:
                 LogMessage "WARNING: " & strTrace, strRoutine
                 Set retColl = New fmeFolders
             Else
-                strTrace = "Found " & retColl.Count & " folders in " & oRootFolder.name
+                strTrace = "Found " & retColl.Count & " folders in " & oRootFolder.Name
                 LogMessage strTrace, strRoutine
             End If
         
@@ -861,8 +863,8 @@ ThrowException:
             For Each oTF In oParentFolder.Folders
             
                 ' Check for 'special' folders
-                If Contains("COMMON_VIEWS", UCase(oTF.name)) Then
-                    strTrace = "Reserved Folder, ignoring: " & oTF.name & "."
+                If Contains("COMMON_VIEWS", UCase(oTF.Name)) Then
+                    strTrace = "Reserved Folder, ignoring: " & oTF.Name & "."
                     LogMessage strTrace, strRoutine
                     GoTo SkipFolder1
                 End If
@@ -873,7 +875,7 @@ ThrowException:
                     LogMessage strTrace, strRoutine
                     GoTo SkipFolder1
                 End If
-                If Len(oTF.name) = 0 Then
+                If Len(oTF.Name) = 0 Then
                     strTrace = "Invalid folder encountered, no NAME."
                     LogMessage strTrace, strRoutine
                     GoTo SkipFolder1
@@ -884,13 +886,13 @@ ThrowException:
                 fldr.Fill oTF
                 retColl.AddItem fldr
                 
-                strTrace = "Added folder to collection: " & oTF.name & _
+                strTrace = "Added folder to collection: " & oTF.Name & _
                     " folder count: " & retColl.Count
                 LogMessage strTrace, strRoutine
               
                 ' Recurse if folder has sub-folders
                 If oTF.Folders.Count > 0 Then
-                    strTrace = "Recursing folder: " & oTF.name
+                    strTrace = "Recursing folder: " & oTF.Name
                     LogMessage strTrace, strRoutine
                 
                     Set fldrs = IndexFoldersWithParent(oTF)
@@ -903,13 +905,13 @@ ThrowException:
                     End If
                 
                 Else
-                    strTrace = "Folder (" & oTF.name & ") has no children."
+                    strTrace = "Folder (" & oTF.Name & ") has no children."
                 End If
 SkipFolder1:
             Next
         
         Else
-            strTrace = "Adding parent folder with no children to collection: " & oTF.name
+            strTrace = "Adding parent folder with no children to collection: " & oTF.Name
             LogMessage strTrace, strRoutine
                 
             Set fldr = New fmeFolder
@@ -960,7 +962,7 @@ ThrowException:
         Dim fmeFldr As fmeFolder
         
         For Each fmeFldr In arList
-            strTrace = "Check default itemType for fme Folder: " & fmeFldr.name
+            strTrace = "Check default itemType for fme Folder: " & fmeFldr.Name
             If fmeFldr.itemType = typ Then
                 On Error Resume Next
                 strTrace = "Retrieving Outlook Folder: " & fmeFldr.path
@@ -1208,6 +1210,8 @@ ThrowException:
         Dim strRoutine As String
         strRoutine = rootClass & ":ReferenceObjects"
         
+        On Error GoTo ThrowException
+        
         Dim tm As New TaskManager
         
         Dim olClassIn As Outlook.OlObjectClass
@@ -1236,9 +1240,12 @@ ThrowException:
                 strTrace = "Unrecognized input object class: " & olClassIn
                 GoTo ThrowException
         End Select
+        
+        Set ReferenceObjects = objOut
+        Exit Function
     
 ThrowException:
-        LogMessage strTrace, strRoutine
+        LogMessageEx strTrace, err, strRoutine
         Set ReferenceObjects = Nothing
         
     End Function

@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} FME_Pane 
    Caption         =   "Task List"
-   ClientHeight    =   8235.001
+   ClientHeight    =   8235
    ClientLeft      =   75
    ClientTop       =   465
    ClientWidth     =   4710
@@ -12,7 +12,7 @@ Attribute VB_Name = "FME_Pane"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
+Attribute VB_Exposed = True
 
 ' - - Fields
 
@@ -214,8 +214,6 @@ Private Sub ts_Tasks_Change()
     Dim tb As Object
     Set tb = ts_Tasks.SelectedItem
     tabView = tb.Caption
-    
-    If f_searchMode Then SetSearchMode False
     
     RefreshView tabView
         

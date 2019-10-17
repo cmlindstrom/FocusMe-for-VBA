@@ -38,7 +38,7 @@ Private Sub Class_Initialize()
 End Sub
 
 Private Sub Class_Terminate()
-
+    Set innerList = Nothing
 End Sub
 
 ' - Methods
@@ -63,7 +63,7 @@ Public Function GetTableByName(ByVal nme As String) As DataTable
     Dim dt As DataTable
     Set dt = Nothing
     For Each dt In innerList
-        If LCase(dt.Name) = LCase(nme) Then
+        If LCase(dt.name) = LCase(nme) Then
             Set dtReturn = dt
             Exit For
         End If

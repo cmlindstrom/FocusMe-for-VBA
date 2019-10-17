@@ -12,16 +12,16 @@ Private Const rootClass As String = "DataSet"
 
 ' - - Properties
 
-Dim f_name As String
+Dim f_Name As String
 Dim f_tables As DataTables
 Dim f_nameSpace As String
 
 ''' Name of the DataSet
-Public Property Let Name(ByVal nme As String)
-    f_name = nme
+Public Property Let name(ByVal nme As String)
+    f_Name = nme
 End Property
-Public Property Get Name() As String
-    Name = f_name
+Public Property Get name() As String
+    name = f_Name
 End Property
 
 ''' Tables contained within the DataSet
@@ -54,7 +54,7 @@ End Sub
 Public Sub Clear()
     Dim dt As DataTable
     For Each dt In f_tables.Items
-        dt.Rows.Clear
+        dt.rows.Clear
     Next
 End Sub
 
@@ -100,7 +100,7 @@ End Sub
 Public Sub Reset()
 
     ' Re-initialize the DataSet
-    f_name = ""
+    f_Name = ""
     f_nameSpace = ""
     
     Dim dt As DataTable
@@ -127,12 +127,17 @@ Public Function GetTableByName(ByVal tblName As String) As DataTable
     
     On Error GoTo ThrowException
     
+    If Len(tblName) = 0 Then
+        strTrace = "An empty table name was encountered."
+        GoTo ThrowException
+    End If
+    
     Dim dtReturn As DataTable
     Set dtReturn = Nothing
     
     Dim dt As DataTable
     For Each dt In f_tables.Items
-        If LCase(dt.Name) = LCase(tblName) Then
+        If LCase(dt.name) = LCase(tblName) Then
             Set dtReturn = dt
             Exit For
         End If
@@ -178,8 +183,8 @@ Private Function LoadDataSetViaDOM(ByVal strXml As String) As DOMDocument60
     
     strTrace = "Establish the DataSet."
     Set nd = oNodes.NextNode
-    f_name = nd.Attributes.getNamedItem("name").Text
-    f_nameSpace = nd.Attributes.getNamedItem("nameSpace").Text
+    f_Name = nd.Attributes.getNamedItem("name").text
+    f_nameSpace = nd.Attributes.getNamedItem("nameSpace").text
     
     strTrace = "Get the table collection."
     Set oNodes = xmlDoc.SelectNodes("//Table")
@@ -201,7 +206,7 @@ Private Function LoadDataSetViaDOM(ByVal strXml As String) As DOMDocument60
         End If
         
         Dim tblName As String
-        tblName = nd.Attributes.getNamedItem("name").Text
+        tblName = nd.Attributes.getNamedItem("name").text
 
         strTrace = "Loading the table: " & tblName
         LoadDataSetTable xmlDoc, tblName
@@ -229,7 +234,7 @@ Private Sub LoadDataSetTable(ByVal doc As MSXML2.DOMDocument60, ByVal tableName 
     
     strTrace = "Create the Table in the DataSet."
     Dim dt As New DataTable
-    dt.Name = tableName
+    dt.name = tableName
         
     strTrace = "Populate the new Table."
     Dim tblNodes As IXMLDOMNodeList
@@ -261,11 +266,11 @@ Private Sub LoadDataSetTable(ByVal doc As MSXML2.DOMDocument60, ByVal tableName 
             Set colNode = rwNode.ChildNodes(k)
             Set kvp = New KeyValuePair
             ' Get property name
-            kvp.Key = colNode.nodeName
+            kvp.key = colNode.nodeName
             ' Get Value Type
-            vt = CInt(colNode.Attributes.getNamedItem("varType").Text)
+            vt = CInt(colNode.Attributes.getNamedItem("varType").text)
             ' Get property value
-            kvp.Value = GetTypedValue(colNode.nodeTypedValue, vt)
+            kvp.value = GetTypedValue(colNode.nodeTypedValue, vt)
             ' Capture value pair
             colValues.Add kvp
         Next
@@ -275,7 +280,7 @@ Private Sub LoadDataSetTable(ByVal doc As MSXML2.DOMDocument60, ByVal tableName 
             strTrace = "Create the table columns."
             For k = 0 To colValues.Count - 1
                 Set kvp = colValues(k)
-                dt.Columns.Add kvp.Key
+                dt.Columns.Add kvp.key
             Next
         End If
             
@@ -285,11 +290,11 @@ Private Sub LoadDataSetTable(ByVal doc As MSXML2.DOMDocument60, ByVal tableName 
         strTrace = "Add the Column values to the new row."
         For k = 0 To colValues.Count - 1
             Set kvp = colValues(k)
-            dr.Add kvp.Key, kvp.Value
+            dr.Add kvp.key, kvp.value
         Next
             
         strTrace = "Add the row to the table."
-        dt.Rows.AddRow dr
+        dt.rows.AddRow dr
         
     Next
                    
@@ -388,11 +393,11 @@ Private Function SaveDataSetViaDOM() As DOMDocument60
     Dim dsAttr As IXMLDOMAttribute
     ' DataSet Name
     Set dsAttr = dom.createAttribute("name")
-    dsAttr.Value = f_name
+    dsAttr.value = f_Name
     dsRoot.Attributes.setNamedItem dsAttr
     ' DataSet NameSpace
     Set dsAttr = dom.createAttribute("nameSpace")
-    dsAttr.Value = f_nameSpace
+    dsAttr.value = f_nameSpace
     dsRoot.Attributes.setNamedItem dsAttr
     
     ' Add the DataSet Node to the DOM
@@ -404,20 +409,20 @@ Private Function SaveDataSetViaDOM() As DOMDocument60
     
         ' Create the table root node
         Dim eName As String
-        eName = ProcessName(dt.Name)
+        eName = ProcessName(dt.name)
         Dim dtRoot As IXMLDOMNode
         Set dtRoot = dom.createElement("Table")
         
         ' Attach the table name as an attribute
         Dim dtAttr As IXMLDOMAttribute
         Set dtAttr = dom.createAttribute("name")
-        dtAttr.Value = eName
+        dtAttr.value = eName
         dtRoot.Attributes.setNamedItem dtAttr
         
         ' Create each row node & append to table node
         Dim dr As DataRow
         Dim dc As DataColumn
-        For Each dr In dt.Rows.Items
+        For Each dr In dt.rows.Items
             ' Create the Object's node (row)
             Set node = dom.createElement(eName)
     
@@ -425,15 +430,15 @@ Private Function SaveDataSetViaDOM() As DOMDocument60
             For Each dc In dt.Columns.Items
                 ' Capture the object's property's value
                 Dim v As Variant
-                v = dr.GetItem(dc.Name)
+                v = dr.GetItem(dc.name)
                 
                 ' Create an XML node
-                Set rwNode = dom.createElement(dc.Name)
-                rwNode.Text = CStr(v)
+                Set rwNode = dom.createElement(dc.name)
+                rwNode.text = CStr(v)
                 
                 ' Add the variant type as an attribute to the rwNode
                 Set rwAttr = dom.createAttribute("varType")
-                rwAttr.Value = VarType(v)
+                rwAttr.value = VarType(v)
                 rwNode.Attributes.setNamedItem rwAttr
                 
                 ' Append to the row node

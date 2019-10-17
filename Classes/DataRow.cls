@@ -16,15 +16,15 @@ Private Const rootClass As String = "DataRow"
 '''     is the name of the column
 Private innerList As ArrayList
 
-Private parentRows As Rows
+Private parentRows As rows
 
 ' Properties
 
 ''' The Collection this row belongs to
-Public Property Let Parent(ByVal rs As Rows)
+Public Property Let Parent(ByVal rs As rows)
     Set parentRows = rs
 End Property
-Public Property Get Parent() As Rows
+Public Property Get Parent() As rows
     Set Parent = parentRows
 End Property
 
@@ -41,8 +41,8 @@ End Sub
 Public Sub Add(ByVal colName As String, ByVal val As Variant)
     
     Dim kvp As New KeyValuePair
-    kvp.Key = colName
-    kvp.Value = val
+    kvp.key = colName
+    kvp.value = val
     
     innerList.Add kvp
     
@@ -66,7 +66,7 @@ Public Sub ParseValues(ByVal arValues As Variant)
         Dim c As Columns
         Set c = parentRows.Table.Columns
         Dim colName As String
-        colName = c.Item(i).Name
+        colName = c.Item(i).name
         ' kvp.Key = c.Item(i).Name
         ' kvp.Value = o
     
@@ -118,7 +118,7 @@ Public Sub SetItem(ByVal v As Variant, ByVal val As Variant)
             ' Get the value at a specific column
             Dim c As DataColumn
             c = var
-            SetValueByKey c.Name, val
+            SetValueByKey c.name, val
         Case Else
             strTrace = "Failed to ascertain the variant type."
             GoTo ThrowException
@@ -155,7 +155,7 @@ Public Function GetItem(ByVal var As Variant) As Variant
             idx = var
             Dim kvp As KeyValuePair
             Set kvp = innerList(idx)
-            retValue = kvp.Value
+            retValue = kvp.value
         Case vbString
             ' Get the value at a specific column by colName
             retValue = GetValueByKey(var)
@@ -163,7 +163,7 @@ Public Function GetItem(ByVal var As Variant) As Variant
             ' Get the value at a specific column
             Dim c As DataColumn
             c = var
-            retValue = GetValueByKey(c.Name)
+            retValue = GetValueByKey(c.name)
         Case Else
             strTrace = "Failed to ascertain the variant type."
             GoTo ThrowException
@@ -192,11 +192,14 @@ Private Sub SetValueByKey(ByVal keyName As String, ByVal val As Variant)
     Dim kvp As KeyValuePair
     Set kvp = GetPairByKey(keyName)
     If IsNothing(kvp) Then
-        strTrace = "Failed to retrieve the column (" & keyName & ") value."
-        GoTo ThrowException
+        strTrace = "WARNING: Failed to retrieve the column (" & keyName & ") value - adding keyValue pair."
+        LogMessage strTrace, strRoutine
+        
+        Add keyName, val
+        ' GoTo ThrowException
     End If
     
-    kvp.Value = val
+    kvp.value = val
     
     Exit Sub
     
@@ -223,7 +226,7 @@ Private Function GetValueByKey(ByVal keyName As String) As Variant
         GoTo ThrowException
     End If
     
-    retValue = kvp.Value
+    retValue = kvp.value
     
     GetValueByKey = retValue
     Exit Function
@@ -246,7 +249,7 @@ Private Function GetPairByKey(ByVal keyName As String) As KeyValuePair
     
     Dim kvp As KeyValuePair
     For Each kvp In innerList
-        If LCase(kvp.Key) = LCase(keyName) Then
+        If LCase(kvp.key) = LCase(keyName) Then
             Set retKVP = kvp
             Exit For
         End If

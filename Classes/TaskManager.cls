@@ -500,22 +500,22 @@ Public Sub Load()
     
 End Sub
 
-Public Sub LoadByProject(ByVal name As String, _
+Public Sub LoadByProject(ByVal Name As String, _
                 Optional ByVal includeCompleted As Boolean = False)
 
     Dim strTrace As String
     Dim strRoutine As String
     strRoutine = rootClass & ":LoadByProject"
     
-    If Len(name) > 0 Then
+    If Len(Name) > 0 Then
         Dim strQuery As String
         
         If Not includeCompleted Then
             ' Not complete and matching the category name
-            strQuery = "@SQL=""" & PR_TASK_COMPLETE & """ = 0 AND """ & PR_CATEGORIES & """ like '%" & name & "%'"
+            strQuery = "@SQL=""" & PR_TASK_COMPLETE & """ = 0 AND """ & PR_CATEGORIES & """ like '%" & Name & "%'"
         Else
             ' Any task matching the category name
-            strQuery = "@SQL=""" & PR_CATEGORIES & """ like '%" & name & "%'"
+            strQuery = "@SQL=""" & PR_CATEGORIES & """ like '%" & Name & "%'"
         End If
         
         LoadDASL strQuery
@@ -1032,7 +1032,7 @@ Public Sub ProcessDroppedText(ByVal strMsg As String, ByVal t As Outlook.TaskIte
     Select Case typ
         Case 1 ' One or more MailItems dropped
             Set dt = importer.Import(strMsg, 1, strHeader, vbTab)
-            strTrace = "Mail: " & dt.name & " found " & dt.rows.Count & " items."
+            strTrace = "Mail: " & dt.Name & " found " & dt.rows.Count & " items."
             ' Find Mail Item
             Dim Mail As ArrayList
             Set Mail = GatherDroppedMail(dt)
@@ -1054,11 +1054,11 @@ Public Sub ProcessDroppedText(ByVal strMsg As String, ByVal t As Outlook.TaskIte
             
         Case 2 ' One or more ContactItems dropped
             Set dt = importer.Import(strMsg, 1, "Full Name", vbTab)
-            strTrace = "Contacts: " & dt.name & " found " & dt.rows.Count & " items."
+            strTrace = "Contacts: " & dt.Name & " found " & dt.rows.Count & " items."
 
         Case 4 ' One or more Tasks dropped
             Set dt = importer.Import(strMsg, 1, "Task Subject", vbTab)
-            strTrace = "Tasks: " & dt.name & " found " & dt.rows.Count & " items."
+            strTrace = "Tasks: " & dt.Name & " found " & dt.rows.Count & " items."
             
         Case Else
             strTrace = "Unrecognized dropped text: " & strMsg
@@ -1173,7 +1173,7 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
 ' +-----------------
 ' | Delegate...     (1003)
 ' | Related Mail... (1004)
-' | Message Task... (1016)
+' | Forward...      (1016)
 ' +-----------------
 ' | Mark Incomplete (1005)
 ' | Mark Complete   (1006)
@@ -1239,7 +1239,7 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
     
     ' Message Task
     Set mni = New ContextMenuItem
-    mni.Caption = "Message Task..."
+    mni.Caption = "Forward..."
     mni.Enabled = True
     mni.itemType = Button
     mni.UID = 1016

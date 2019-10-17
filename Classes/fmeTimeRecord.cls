@@ -13,6 +13,8 @@ Option Explicit
 
 Private Const rootClass As String = "TimeRecord"
 
+Private Const OneDayHours As Integer = 9
+
 Private Enum enuTimeRecordType
     Appointment = 1
     Journal = 2
@@ -70,8 +72,8 @@ Public Property Get RecordDate() As Date
 End Property
 
 ''' Subject - String
-Public Property Let Subject(ByVal Title As String)
-    f_Subject = Title
+Public Property Let Subject(ByVal title As String)
+    f_Subject = title
 End Property
 Public Property Get Subject() As String
     Subject = f_Subject
@@ -138,6 +140,10 @@ Public Function ProjectList() As ArrayList
             For i = 0 To pList.Count - 1
                 Set myP = pList(i)
                 projList.Add myP
+                
+                ' Grab the first project
+                If i = 0 Then Set f_Project = myP
+                
             Next
             
         End If
@@ -222,7 +228,7 @@ Public Sub FillAppointment(ByVal oAppt As Outlook.AppointmentItem)
     On Error GoTo ThrowException
     
     f_EntryID = oAppt.EntryId
-    f_RecordDate = oAppt.start
+    f_RecordDate = oAppt.Start
     f_Duration = oAppt.Duration
     f_RecordType = "Appointment"
     f_Subject = oAppt.Subject
@@ -231,6 +237,9 @@ Public Sub FillAppointment(ByVal oAppt As Outlook.AppointmentItem)
     Set f_CalendarFolder = oAppt.Parent
     
     ' f_Mileage = CDbl(oAppt.Mileage)
+    
+    ' Make AllDay appointments one shift
+    If oAppt.AllDayEvent Then f_Duration = oAppt.Duration / 3
     
     Exit Sub
     
@@ -258,6 +267,9 @@ Public Sub FillRecurrencePattern(ByVal oAppt As Outlook.AppointmentItem, ByVal s
     Set f_CalendarFolder = oAppt.Parent
     
     ' f_Mileage = CDbl(oAppt.Mileage)
+    
+    ' Make AllDay appointments one shift
+    If oAppt.AllDayEvent Then f_Duration = oAppt.Duration / 3
 
     Exit Sub
     

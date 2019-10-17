@@ -875,7 +875,25 @@ Public Sub LogMessageEx(ByVal trace As String, _
    
 End Sub
 
-Public Sub ClearTraceLog()
+Public Sub TrimLogs()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":TrimLogs"
+    
+    On Error GoTo ThrowException
+    
+    Call ClearTraceLog(500) ' (500)
+    Call ClearErrorLog(500)
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+Public Sub ClearTraceLog(Optional ByVal rowsToKeep As Integer = 200)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -889,7 +907,7 @@ Public Sub ClearTraceLog()
     errPath = GetAppSystemPath
     logPath = errPath & "\" & traceLogFileName
     
-    ClearLog logPath, True, 200
+    ClearLog logPath, True, rowsToKeep
     
     Exit Sub
     
@@ -898,7 +916,7 @@ ThrowException:
 
 End Sub
 
-Public Sub ClearErrorLog()
+Public Sub ClearErrorLog(Optional ByVal rowsToKeep As Integer = 200)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -912,7 +930,7 @@ Public Sub ClearErrorLog()
     errPath = GetAppSystemPath
     logPath = errPath & "\" & errorLogFileName
     
-    ClearLog logPath, True, 200
+    ClearLog logPath, True, rowsToKeep
     
     Exit Sub
     
@@ -1008,12 +1026,8 @@ Private Sub ClearLog(ByVal logFilePath As String, _
         Dim j As Integer
         Dim k As Integer
         j = UBound(rows) - rowsToKeep
-        If j < 0 Then
-            j = 0
-            k = UBound(rows) - 1
-        Else
-            k = rowsToKeep - 1
-        End If
+        If j < 0 Then j = 0
+        k = UBound(rows) - 1
         For i = j To k
             strLine = Trim(rows(i))
             If Len(strLine) > 0 Then strKeep = strKeep & strLine & vbCrLf
@@ -1218,9 +1232,11 @@ Public Sub WriteTextFile(ByVal filePath As String, ByVal fileContent As String)
     TextFile = FreeFile
 
     'Open the text file
+    strTrace = "Opening file path: '" & filePath & "'..."
     Open filePath For Output As TextFile
 
     'Write the text
+    strTrace = "Writing content (" & Len(fileContent) & " chars) to path: " & filePath
     Print #TextFile, fileContent
   
     'Save & Close Text File

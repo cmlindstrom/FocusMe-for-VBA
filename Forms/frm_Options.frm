@@ -14,6 +14,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
+
 ' - - Fields
 
 Private Const rootClass As String = "frm_Options"
@@ -37,54 +38,8 @@ Private Sub btn_IndexFolders_Click()
     
     Call Status("Working...")
     
-    strTrace = "Get Outlook folders."
-    Dim ut As New Utilities
-    Dim fldrs As Folders
-    Set fldrs = ut.IndexFolders()
-    If fldrs Is Nothing Then
-        strTrace = "Failed to query the Outlook dataStore folder structure."
-        GoTo ThrowException
-    End If
-    If fldrs.Count = 0 Then
-        strTrace = "User has no folders in their folder tree."
-        MsgBox strTrace
-        Exit Sub
-    End If
-    
-    Dim ldb As New dsDataStore
-    ldb.Connect
-    
-    strTrace = "Clear the current folder set."
-    ldb.ClearEntireCollection "Folder"
-    
-    strTrace = "Update the local datastore with the indexed folders from Outlook."
-    Dim fCnt As Integer
-    fCnt = 0
-    Dim f As fmeFolder
-    For Each f In fldrs.Items
-    
-        If Not Len(f.EntryId) = 0 Then
-
-            ' Add folder to local datastore
-            If ldb.Insert(f, "Folder") Then
-                strTrace = "Indexed a new folder: " & f.Path
-                fCnt = fCnt + 1
-            Else
-                strTrace = "Failed to insert a new folder (" & f.Path & ") into the datastore."
-                LogMessage strTrace, strRoutine
-            End If
-                
-        Else
-            strTrace = "Ignoring Outlook folder - empty path, id: " & f.id
-            LogMessage strTrace, strRoutine
-        End If
-                
-    Next
-    
-    strTrace = "Indexed " & fCnt & " folders from Outlook."
-    LogMessage strTrace, strRoutine
-    
-    ldb.Disconnect
+    Dim st As New Setup
+    st.IndexOutlookFolders
     
     GoTo Finally
     
@@ -106,51 +61,12 @@ Private Sub btn_ImportCategories_Click()
     
     Call Status("Working...")
     
-    Dim pm As New ProjectManager
-    Dim myList As Projects
-    Set myList = pm.ImportFromMCL
-    If myList.Count = 0 Then
-        strTrace = "No projects found in the Outlook Master Category List."
-        MsgBox strTrace
-        Exit Sub
-    End If
-    
-    Dim ldb As New dsDataStore
-    ldb.Connect
-    
-    Dim arProj As ArrayList
-    Set arProj = ldb.GetEntireCollection("Project")
-    If arProj Is Nothing Then
-        Exit Sub
-    End If
-    
     Dim pCnt As Integer
-    pCnt = 0
-    
-    Dim p As fmeProject
-    Dim ip As fmeProject
-    Dim bFnd As Boolean
-    
-    For Each ip In myList.Items
-        bFnd = False
-        For Each p In arProj
-           If LCase(ip.Subject) = LCase(p.Subject) Then
-                bFnd = True
-                Exit For
-            End If
-        Next
-        
-        If Not bFnd Then
-            ldb.Insert ip, "Project"
-            pCnt = pCnt + 1
-        End If
-        
-    Next
-        
-    ldb.Disconnect
-       
+    Dim st As New Setup
+    pCnt = st.ImportProjectsFromCategories
+          
 SkipOut:
-    MsgBox "Imported " & myList.Items.Count & " potential projects, saved " & pCnt & " to the datastore."
+    MsgBox "Imported " & pCnt & " projects to the datastore."
     
     GoTo Finally
     
@@ -188,6 +104,30 @@ Private Sub btn_OK_Click()
 
 End Sub
 
+Private Sub btn_ResetPane_Click()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":btn_ResetPane_Click"
+
+    Dim f As FME_Pane
+    
+    Dim UFHWnd As Long
+    UFHWnd = WinForms.GetUserFormHandle("Task List")
+    If UFHWnd <= 0 Then
+        strTrace = "ERROR: Failed to find the Task List form."
+        LogMessage strTrace, strRoutine
+        Exit Sub
+    End If
+    
+    Call SetWindowPosition(UFHWnd, 10, 10)
+    
+    ' - Logic didn't work
+    ' Set f = ThisOutlookSession.FMEPane
+    ' If Not f Is Nothing Then Call SetFormPosition(f, 10, 10)
+    
+End Sub
+
 Private Sub btn_SelectFolder_Click()
 
     Dim ut As New Utilities
@@ -210,7 +150,7 @@ End Sub
 
 Private Sub rb_DoNotMoveMail_Change()
     bDirty = True
-    If rb_DoNotMoveMail.Value Then
+    If rb_DoNotMoveMail.value Then
         EnableEvents False
     Else
         EnableEvents True
@@ -219,7 +159,7 @@ End Sub
 
 Private Sub rb_MoveMailAll_Change()
     bDirty = True
-    If rb_MoveMailAll.Value Then
+    If rb_MoveMailAll.value Then
         EnableEvents False
     Else
         EnableEvents True
@@ -228,7 +168,7 @@ End Sub
 
 Private Sub rb_MoveMailOnSpecific_Change()
     bDirty = True
-    If rb_MoveMailOnSpecific.Value Then
+    If rb_MoveMailOnSpecific.value Then
         EnableEvents True
     End If
 End Sub
@@ -262,32 +202,34 @@ Private Sub GetUI()
     Dim stgs As New Settings
     
     ' General
-    chkbx_ShowTaskPaneOnStartup.Value = stgs.ShowOnStartup
-    chkbx_EnableApp.Value = stgs.EnableAppEvents
+    chkbx_ShowTaskPaneOnStartup.value = stgs.ShowOnStartup
+    chkbx_EnableApp.value = stgs.EnableAppEvents
     
     ' Events
     Dim bMove As Boolean
     bMove = stgs.AutoMove
     If Not bMove Then
-        rb_DoNotMoveMail.Value = True
+        rb_DoNotMoveMail.value = True
         EnableEvents False
     Else
         Dim bSpecific As Boolean
         bSpecific = stgs.MoveOnSpecificEvents
         If Not bSpecific Then
-            rb_MoveMailAll.Value = True
+            rb_MoveMailAll.value = True
         Else
-            rb_MoveMailOnSpecific.Value = True
+            rb_MoveMailOnSpecific.value = True
         End If
     End If
-    chkbx_DeferToAppt.Value = stgs.MoveOnDeferToAppt
-    chkbx_DeferToTask.Value = stgs.MoveOnDeferToTask
-    chkbx_Delegate.Value = stgs.MoveOnDelegate
-    chkbx_FileInDrawer.Value = stgs.MoveOnFileInDrawer
-    chkbx_OnReply.Value = stgs.MoveOnReply
+    chkbx_DeferToAppt.value = stgs.MoveOnDeferToAppt
+    chkbx_DeferToTask.value = stgs.MoveOnDeferToTask
+    chkbx_Delegate.value = stgs.MoveOnDelegate
+    chkbx_FileInDrawer.value = stgs.MoveOnFileInDrawer
+    chkbx_OnReply.value = stgs.MoveOnReply
     
     ' Location
     lbl_DestinationFolderPath.Caption = stgs.DestinationFolder
+    
+    chkbx_IgnoreSentItemsMove.value = stgs.IgnoreSentMailMove
 
 End Sub
 
@@ -296,15 +238,15 @@ Private Sub SaveSettings()
         Dim stgs As New Settings
         
         ' General
-        stgs.ShowOnStartup = chkbx_ShowTaskPaneOnStartup.Value
-        stgs.EnableAppEvents = chkbx_EnableApp.Value
+        stgs.ShowOnStartup = chkbx_ShowTaskPaneOnStartup.value
+        stgs.EnableAppEvents = chkbx_EnableApp.value
         
         ' Events
-        If rb_DoNotMoveMail.Value Then
+        If rb_DoNotMoveMail.value Then
             stgs.AutoMove = False
         Else
             stgs.AutoMove = True
-            If rb_MoveMailAll.Value Then
+            If rb_MoveMailAll.value Then
                 stgs.MoveOnSpecificEvents = False
                 ' Set 5Ds flags to True
                 stgs.MoveOnDeferToAppt = True
@@ -315,17 +257,17 @@ Private Sub SaveSettings()
             Else
                 stgs.MoveOnSpecificEvents = True
                 ' Gather 5D flags
-                stgs.MoveOnDeferToAppt = chkbx_DeferToAppt.Value
-                stgs.MoveOnDeferToTask = chkbx_DeferToTask.Value
-                stgs.MoveOnDelegate = chkbx_Delegate.Value
-                stgs.MoveOnFileInDrawer = chkbx_FileInDrawer.Value
-                stgs.MoveOnReply = chkbx_OnReply.Value
+                stgs.MoveOnDeferToAppt = chkbx_DeferToAppt.value
+                stgs.MoveOnDeferToTask = chkbx_DeferToTask.value
+                stgs.MoveOnDelegate = chkbx_Delegate.value
+                stgs.MoveOnFileInDrawer = chkbx_FileInDrawer.value
+                stgs.MoveOnReply = chkbx_OnReply.value
             End If
         End If
         
         ' Location
         stgs.DestinationFolder = lbl_DestinationFolderPath.Caption
-        
+        stgs.IgnoreSentMailMove = chkbx_IgnoreSentItemsMove.value
         
         ' Commit Settings
         stgs.Save

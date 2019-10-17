@@ -12,7 +12,7 @@ Attribute VB_Exposed = False
 Private Const rootClass As String = "fmeProject"
 
 Private f_Id As String
-Private f_name As String
+Private f_Name As String
 Private f_Code As String
 Private f_description As String
 
@@ -21,6 +21,8 @@ Private f_CombineTitleCode As Boolean
 
 Private f_WinFolder As String
 Private f_OutlookFolder As String
+
+Private f_WorkspaceId As String
 
 Private f_Status As Integer
 Private f_Priority As Integer
@@ -32,7 +34,8 @@ Private f_Modified As Date
 Private f_Deleted As Date
 
 Private Const fields As String = "id,Name,Code,CombineTitleCode,Active,Description,WindowsFolder," & _
-                                    "Status,Priority,Color,mclId,Created,Modified,Deleted"
+                                    "OutlookFolder,WorkspaceId,Status,Priority,Color,mclId,Created," & _
+                                    "Modified,Deleted"
 
 
 ' - Properties
@@ -46,11 +49,11 @@ Public Property Get id() As String
 End Property
 
 ''' Name or Title for the Project
-Public Property Let Name(ByVal myName As String)
-    f_name = myName
+Public Property Let name(ByVal myName As String)
+    f_Name = myName
 End Property
-Public Property Get Name() As String
-    Name = f_name
+Public Property Get name() As String
+    name = f_Name
 End Property
 
 ''' Project Code - for organizing / sorting
@@ -100,6 +103,14 @@ Public Property Let OutlookFolder(ByVal fldrPath As String)
 End Property
 Public Property Get OutlookFolder() As String
     OutlookFolder = f_OutlookFolder
+End Property
+
+''' Gets / Sets the pointer to the parent Workspace
+Public Property Let WorkspaceId(ByVal id As String)
+    f_WorkspaceId = id
+End Property
+Public Property Get WorkspaceId() As String
+    WorkspaceId = f_WorkspaceId
 End Property
 
 ''' Gets / Sets the Status enumeration index
@@ -170,10 +181,14 @@ Private Sub Class_Initialize()
     f_Id = "P" & Common.GenerateUniqueID(6)
 
     ' Defaults
-    f_name = ""
+    f_Name = ""
     f_Active = True
     f_CombineTitleCode = True
     f_Color = 0
+    
+    f_windowsfolder = ""
+    f_OutlookFolder = ""
+    f_WorkspaceId = ""
     
     f_Created = #1/1/1970#
     f_Modified = #1/1/1970#
@@ -190,19 +205,25 @@ End Sub
 Public Function Subject() As String
 
     Dim strReturn As String
-    strReturn = f_name
+    strReturn = f_Name
     
     If f_CombineTitleCode Then
-        strReturn = f_Code & " - " & f_name
+        strReturn = f_Code & " - " & f_Name
     End If
     
     Subject = strReturn
 
 End Function
 
+''' Returns True if the Status is equal to olTaskComplete
 Public Function Complete() As Boolean
     Complete = (f_Status = Outlook.OlTaskStatus.olTaskComplete)
 End Function
+
+''' Sets the Project's parent Workspace
+Public Sub SetWorkspace(ByVal w As fmeWorkspace)
+    If Not w Is Nothing Then f_WorkspaceId = w.id
+End Sub
 
 ''' Sets the Project's status using the Outlook enumeration
 Public Sub SetStatus(ByVal s As Outlook.OlTaskStatus)
@@ -351,13 +372,13 @@ Public Sub UpdateMCL()
     
     Dim ut As New Utilities
     
-    If Len(f_name) = 0 Then
+    If Len(f_Name) = 0 Then
         strTrace = "Cannot assign a Master Category without a name."
         GoTo ThrowException
     End If
     
     If Not f_Active Then
-        strTrace = "Project '" & f_name & "' is inactive, skipping request."
+        strTrace = "Project '" & f_Name & "' is inactive, skipping request."
         GoTo ThrowException
     End If
     

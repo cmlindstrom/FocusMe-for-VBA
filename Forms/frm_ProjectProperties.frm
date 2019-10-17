@@ -24,6 +24,10 @@ Dim bDirty As Boolean
 Dim bDirtyMCL As Boolean
 
 Private tm As TaskManager
+Private cm As ContactManager
+
+Dim WithEvents frmW As frm_WorkspaceProperties
+Attribute frmW.VB_VarHelpID = -1
 
 ' - Events
 
@@ -45,6 +49,9 @@ Private Sub mp_Tabs_Change()
     If InStr(1, LCase(myTab.Caption), "plan") > 0 Then
         tm.LoadByProject f_Project.Name, chkbx_IncludeCompletedTasks.value
     End If
+    If Contains("contact", LCase(myTab.Caption)) Then
+        cm.LoadByProject f_Project.Name
+    End If
    
 End Sub
 
@@ -63,16 +70,16 @@ Private Sub imgLogo_Click()
     
     On Error GoTo ThrowException
 
-    Dim X As Integer
-    Dim Y As Integer
+    Dim x As Integer
+    Dim y As Integer
 
     strTrace = "Show Color Picker dialog."
     Dim frm_Color As New frm_ColorPicker
     
     strTrace = "Set up start location."
-    Call TryGetRelativePosition(Me.imgLogo, X, Y)
-    frm_Color.Left = X
-    frm_Color.Top = Y
+    Call TryGetRelativePosition(Me.imgLogo, x, y)
+    frm_Color.Left = x
+    frm_Color.Top = y
     
     frm_Color.Show
     
@@ -111,7 +118,7 @@ Private Sub txtbx_Title_Change()
     Call UpdateMCL
 End Sub
 
-Private Sub txtbx_Title_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+Private Sub txtbx_Title_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Single, ByVal y As Single)
 
    If Button = 2 Then
         ' Right Mouse Click
@@ -130,13 +137,43 @@ Private Sub txtbx_Title_MouseUp(ByVal Button As Integer, ByVal Shift As Integer,
 
 End Sub
 
-Private Sub btn_GetNextCode_Click()
+' - Categories
 
-    ' Read the projects - get the highest code, add one
+' - Workspaces
 
+Private Sub btn_ManageWorkspaces_Click()
+    Call EditWorkspace
 End Sub
 
-' - Categories
+Private Sub frmW_Closing(ByVal sender As Object, ByVal saved As Boolean)
+    
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":btn_SelectWinFolder_Click"
+    
+    On Error GoTo ThrowException
+        
+    Dim f As frm_WorkspaceProperties
+    Set f = sender
+    If f Is Nothing Then
+        strTrace = "Failed to cast the sender to the Workspace form."
+        GoTo ThrowException
+    End If
+        
+    Dim w As fmeWorkspace
+    Set w = f.Workspace
+        
+    If saved Then
+        Call RefreshWorkspaces
+        Me.cmbobx_Workspace.text = w.Name
+    End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
 
 ' - Links
 
@@ -147,6 +184,12 @@ Private Sub btn_SelectWinFolder_Click()
     strRoutine = rootClass & ":btn_SelectWinFolder_Click"
     
     On Error GoTo ThrowException
+    
+    strTrace = BrowseFolderEx("Select an associated Windows folder for this project.")
+    If Len(strTrace) > 0 Then
+        txtbx_WinFolder.text = strTrace
+        bDirty = True
+    End If
     
 '    Dim xlObj As New Excel.Application
 '    Dim oDialog As FileDialog
@@ -171,7 +214,7 @@ Private Sub btn_SelectOutlookFolder_Click()
     Dim destFldr As Outlook.Folder
     Set destFldr = ut.SelectOutlookFolder
     If Not IsNothing(destFldr) Then
-        txtbx_OutlookFolder.Text = destFldr.FolderPath
+        txtbx_OutlookFolder.text = destFldr.FolderPath
         bDirty = True
     End If
 
@@ -211,6 +254,23 @@ Private Sub btn_EditTask_Click()
     tm.OpenTask
 End Sub
 
+' - Contacts Tab
+
+Private Sub btn_AddContact_Click()
+    ' Create a new contact for this project
+End Sub
+
+Private Sub btn_AssignContact_Click()
+    ' Assign one or more contacts to this project
+End Sub
+
+Private Sub btn_EditContact_Click()
+    ' Edit selected contact
+End Sub
+
+Private Sub btn_RemoveContact_Click()
+    ' Remove selected contact from the project
+End Sub
 
 ' - Buttons
 
@@ -257,9 +317,15 @@ Private Sub UserForm_Initialize()
     cmbobx_Priority.AddItem "High"      ' Outlook.OlImportance.olImportanceHigh   ' 2
     cmbobx_Priority.value = "Normal"
     
+    Call RefreshWorkspaces
+    
     ' - Setup Task Manager
     Set tm = New TaskManager
     Set tm.ListView = lv_Tasks
+    
+    ' - Setup Contact Manager
+    Set cm = New ContactManager
+    Set cm.ListView = lv_Contacts
     
     ' - - Set up Category Colors ComboBox
     ' Create imglst from Palette Tab
@@ -304,6 +370,7 @@ Private Sub UserForm_Initialize()
     
     ' Create an empty project
     Set f_Project = New fmeProject
+    SetUI
     
     ' Set Dirty Flag
     bDirty = False
@@ -346,10 +413,10 @@ Private Sub UpdateMCL()
 
     If chkbx_CombineTitleCode.value Then
         ' Combine the code and title
-        lbl_MCLName.Caption = txtbx_Code.Text & " - " & txtbx_Title.Text
+        lbl_MCLName.Caption = txtbx_Code.text & " - " & txtbx_Title.text
     Else
         ' Show just the title
-        lbl_MCLName.Caption = txtbx_Title.Text
+        lbl_MCLName.Caption = txtbx_Title.text
     End If
 
     bDirty = True
@@ -369,11 +436,11 @@ Private Sub GetUI()
     With f_Project
     
         ' Strings
-        .Name = txtbx_Title.Text
-        .Code = txtbx_Code.Text
-        .Description = txtbx_Description.Text
-        .WindowsFolder = txtbx_WinFolder.Text
-        .OutlookFolder = txtbx_OutlookFolder.Text
+        .Name = txtbx_Title.text
+        .Code = txtbx_Code.text
+        .Description = txtbx_Description.text
+        .WindowsFolder = txtbx_WinFolder.text
+        .OutlookFolder = txtbx_OutlookFolder.text
         
         ' Enums
         .SetStatusFromName (cmbobx_Status.value)
@@ -384,15 +451,25 @@ Private Sub GetUI()
         .CombineTitleCode = chkbx_CombineTitleCode.value
         .Active = chkbx_Active.value
         
+        ' Workspace
+        Dim w As fmeWorkspace
+        Set w = GetWorkspaceFromUI
+        If Not w Is Nothing Then
+            .WorkspaceId = w.id
+        Else
+            .WorkspaceId = ""
+        End If
+        
     End With
     
     Exit Sub
     
 ThrowException:
     LogMessageEx strTrace, err, strRoutine
-
   
 End Sub
+
+
 
 ''' Set control values to the internal Project object instance
 Private Sub SetUI()
@@ -406,11 +483,11 @@ Private Sub SetUI()
     With f_Project
     
         ' Strings
-        txtbx_Title.Text = .Name
-        txtbx_Code.Text = .Code
-        txtbx_Description.Text = .Description
-        txtbx_WinFolder.Text = .WindowsFolder
-        txtbx_OutlookFolder.Text = .OutlookFolder
+        txtbx_Title.text = .Name
+        txtbx_Code.text = .Code
+        txtbx_Description.text = .Description
+        txtbx_WinFolder.text = .WindowsFolder
+        txtbx_OutlookFolder.text = .OutlookFolder
         
         ' Enums
         cmbobx_Status.value = .GetStatusName
@@ -420,6 +497,11 @@ Private Sub SetUI()
         ' Bools
         chkbx_CombineTitleCode.value = .CombineTitleCode
         chkbx_Active.value = .Active
+        
+        ' Workspace
+        Dim nme As String
+        nme = SetWorkspaceUI(.WorkspaceId)
+        cmbobx_Workspace.text = nme
         
     End With
     
@@ -433,7 +515,7 @@ ThrowException:
 End Sub
 
 Private Sub Status(Optional ByVal msg As String = "")
-    txtbx_Status.Text = msg
+    txtbx_Status.text = msg
 End Sub
 
 Private Sub UpdateTitle()
@@ -451,6 +533,147 @@ Private Sub UpdateTitle()
     Me.Caption = strCap
 
 End Sub
+
+Private Sub EditWorkspace()
+
+    ' Get Workspace from ComboBox
+    Dim nme As String
+    nme = cmbobx_Workspace.text
+    
+    ' Show Workspace Dialog
+    Set frmW = New frm_WorkspaceProperties
+    frmW.LoadFromName nme
+    frmW.Show
+    
+    ' Handle choice using the Closing EventHandler
+
+End Sub
+
+Private Sub RefreshWorkspaces()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SaveToDataStore"
+    
+    On Error GoTo ThrowException
+
+    Dim ds As New dsDataStore
+    ds.Connect
+    
+    ' Clear the current dropdowns
+    cmbobx_Workspace.Clear
+    
+    ' Load a new list
+    Dim arList As ArrayList
+    Set arList = ds.GetCollection("Workspace")
+    If IsNothing(arList) Then
+        strTrace = "Workspace datastore query failed."
+        GoTo ThrowException
+    End If
+    
+    Dim sc As New SortCollection
+    sc.Sort "Name", arList
+    
+    Dim w As fmeWorkspace
+    If arList.Count > 0 Then
+        cmbobx_Workspace.AddItem "None"
+        For i = 0 To arList.Count - 1
+            Set w = arList(i)
+            cmbobx_Workspace.AddItem w.Name
+        Next
+    Else
+        cmbobx_Workspace.AddItem "None"
+    End If
+    
+    GoTo Finally
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+Finally:
+    Set ds = Nothing
+    
+End Sub
+
+''' Returns the name of the Workspace from the workspace id
+Private Function SetWorkspaceUI(ByVal wId As String) As String
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SetWorkspaceUI"
+    
+    On Error GoTo ThrowException
+    
+    If Len(wId) = 0 Then
+        strTrace = "An empty id encountered."
+        GoTo ThrowException
+    End If
+    
+    Dim w As fmeWorkspace
+        
+    Dim ds As New dsDataStore
+    ds.Connect
+    
+    Set w = ds.GetItemById(wId, "Workspace")
+    If w Is Nothing Then
+        strTrace = "Failed to find a Workspace with the id: " & wId
+        GoTo ThrowException
+    End If
+        
+    SetWorkspaceUI = w.Name
+    GoTo Finally
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    SetWorkspaceUI = ""
+    
+Finally:
+    Set ds = Nothing
+
+End Function
+
+''' Returns the Workspace from the Workspace Name
+Private Function GetWorkspaceFromUI() As fmeWorkspace
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetWorkspaceFromUI"
+    
+    On Error GoTo ThrowException
+    
+    Dim w As fmeWorkspace
+    
+    Dim wName As String
+    wName = cmbobx_Workspace.text
+    If Len(wName) = 0 Then
+        strTrace = "No workspace set."
+        GoTo ThrowException
+    End If
+    If Contains("none", wName) Then
+        strTrace = "Workspace 'None' selected."
+        GoTo ThrowException
+    End If
+
+    Dim ds As New dsDataStore
+    ds.Connect
+    
+    Set w = ds.GetItemByProperty("Workspace", "Name", wName)
+    If w Is Nothing Then
+        strTrace = "Failed to find a Workspace with the name: " & wName
+        GoTo ThrowException
+    End If
+    
+    Set GetWorkspaceFromUI = w
+    GoTo Finally
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetWorkspaceFromUI = Nothing
+    
+Finally:
+    Set ds = Nothing
+
+End Function
 
 ''' Saves the internal project to the local Datastore
 Private Sub SaveToDataStore()
@@ -497,7 +720,7 @@ Finally:
 End Sub
 
 Private Function TryGetRelativePosition(ByVal ctrl As control, _
-                                         ByRef X As Integer, ByRef Y As Integer, _
+                                         ByRef x As Integer, ByRef y As Integer, _
                                 Optional ByVal sp As Integer = 0) As Boolean
                                          
     Dim strTrace As String
@@ -518,8 +741,8 @@ Private Function TryGetRelativePosition(ByVal ctrl As control, _
     tY = Me.Top
     
     ' Return position aligned to the left and under the specified control
-    X = tX + ctrl.Left  '(Me.Width / 2)
-    Y = tY + ctrl.Top + titleBarHeight + ctrl.Height ' (Me.Height / 2)
+    x = tX + ctrl.Left  '(Me.Width / 2)
+    y = tY + ctrl.Top + titleBarHeight + ctrl.Height ' (Me.Height / 2)
     
     '  Assume starts in center of application screen
     TryGetRelativePosition = True

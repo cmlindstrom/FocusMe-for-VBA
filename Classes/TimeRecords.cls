@@ -20,7 +20,6 @@ Dim myItems As ArrayList
 Dim ut As Utilities
 Dim stgs As Settings
 
-
 ' - Events
 
 Public Event OnProgress()
@@ -346,6 +345,10 @@ Public Sub Export(ByVal strFullFilePath As String)
     For Each s In props
         strLine = strLine & s & ","
     Next
+        
+    ' Add dependent objects
+    strLine = strLine & "Workspace,"
+    
     ' Add pivotTable field headers
     strLine = strLine & "Reported_Duration,Date,"
     
@@ -365,6 +368,16 @@ Public Sub Export(ByVal strFullFilePath As String)
             strTrace = "Process field: " & s & "."
             strLine = strLine & CStr(GetProperty(tr, s)) & ","
         Next
+        
+        ' Add dependent object columns
+        Dim w As fmeWorkspace
+        Set w = GetWorkspace(tr)
+        If w Is Nothing Then
+            strLine = strLine & "None,"
+        Else
+            strLine = strLine & w.Name & ","
+        End If
+                
         ' Add pivotTable fields
         strLine = strLine & CStr(tr.DurationHours) & "," & GetDateOnly(tr.RecordDate) & ","
         
@@ -388,6 +401,7 @@ End Sub
 
 ''' Pivots the current timeRecord collection according to Row/Column specifiers
 Public Function Analyze(Optional ByVal tblName As String = "Default", _
+                        Optional ByVal groupBy As enuTimecardGroupBy = enuTimecardGroupBy.Project, _
                         Optional ByVal includeRowName As Boolean = False, _
                         Optional ByVal RowNameHeaderLabel As String = "Name", _
                         Optional ByVal includeHeaderRow As Boolean = False, _
@@ -425,11 +439,18 @@ Public Function Analyze(Optional ByVal tblName As String = "Default", _
         Next
     Next
     
-    strTrace = "Create a collection of Series, 1 per category."
+    strTrace = "Create a collection of Series."
     Dim SeriesCollection As ArrayList
-    Set SeriesCollection = SerializeByCategory()
+    Select Case groupBy
+        Case enuTimecardGroupBy.Project ' 1 series per category
+            Set SeriesCollection = SerializeByCategory()
+        Case enuTimecardGroupBy.Workspace ' 1 series per workspace
+            Set SeriesCollection = SerializeByWorkspace()
+        Case Else
+            Set SeriesCollection = SerializeByCategory()
+    End Select
     If SeriesCollection Is Nothing Then
-        strTrace = "Failed to serialize the records by Category."
+        strTrace = "Failed to serialize the records."
         GoTo ThrowException
     End If
  
@@ -459,6 +480,87 @@ Public Function Analyze(Optional ByVal tblName As String = "Default", _
 ThrowException:
     LogMessageEx strTrace, err, strRoutine
     Set Analyze = Nothing
+
+End Function
+
+''' Get the first project from a TimeRecord
+Public Function GetProject(ByVal tr As fmeTimeRecord) As fmeProject
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetProject"
+    
+    On Error GoTo ThrowException
+    
+    Dim pList As ArrayList
+    Set pList = tr.ProjectList
+    If pList Is Nothing Then
+        strTrace = "An error occurred while list the projects for the TimeRecord."
+        GoTo ThrowException
+    End If
+    If pList.Count = 0 Then
+        strTrace = "Failed to find any Projects for this TimeRecord."
+        GoTo ThrowException
+    End If
+    
+    ' Gets set when the list is created - this will
+    '   be the first project in the list
+    Set GetProject = tr.Project
+    GoTo Finally
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetProject = Nothing
+    
+Finally:
+    
+
+End Function
+
+''' Get the associated workspace from a TimeRecord
+Public Function GetWorkspace(ByVal tr As fmeTimeRecord) As fmeWorkspace
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetWorkspace"
+    
+    On Error GoTo ThrowException
+    
+    Dim p As fmeProject
+    Set p = GetProject(tr)
+    If p Is Nothing Then
+        strTrace = "No Project assigned, therefore no Workspace assigned."
+        GoTo ThrowException
+    End If
+    
+    Dim wId As String
+    wId = p.WorkspaceId
+    If Len(wId) = 0 Or wId = "1" Then
+        strTrace = "There is not an associated Workspace with Project: " & p.Name
+        GoTo ThrowException
+    End If
+    
+    Dim ds As New dsDataStore
+    ds.Connect
+    
+    Dim w As fmeWorkspace
+    Set w = ds.GetItemById(wId, "Workspace")
+    If w Is Nothing Then
+        strTrace = "Failed to find a Workspace from id: " & wId
+        GoTo ThrowException
+    End If
+    
+    Set GetWorkspace = w
+    GoTo Finally
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetWorkspace = Nothing
+    
+Finally:
+    Set ds = Nothing
 
 End Function
 
@@ -551,7 +653,7 @@ Private Function GetIndexValue(ByVal tr As fmeTimeRecord) As String
         Case enuSortOn.Subject
             strReturn = tr.Subject
         Case enuSortOn.Calendar
-            strReturn = tr.CalendarFolder.name
+            strReturn = tr.CalendarFolder.Name
         Case enuSortOn.startDate
             strReturn = Format(tr.RecordDate, "yyyymmdd")
     End Select
@@ -646,7 +748,7 @@ Private Function SerializeByCategory() As ArrayList
             ' Check to see if Series exists for this category
             bFnd = False
             For Each ser In SeriesCollection
-                If ser.name = s Then
+                If ser.Name = s Then
                     Set focusSeries = ser
                     bFnd = True
                     Exit For
@@ -656,7 +758,7 @@ Private Function SerializeByCategory() As ArrayList
             If Not bFnd Then
                 ' Create a new series
                 Set focusSeries = New Series
-                focusSeries.name = s
+                focusSeries.Name = s
                 
                 ' Add it to the collection
                 SeriesCollection.Add focusSeries
@@ -673,7 +775,8 @@ Private Function SerializeByCategory() As ArrayList
     ' Sort collection by category name
     Dim sColl As New SortCollection
     sColl.Sort "Name", SeriesCollection
-       
+    
+    ' Return sorted series collection
     Set SerializeByCategory = sColl.List ' SeriesCollection
     Exit Function
     
@@ -681,6 +784,79 @@ ThrowException:
     LogMessageEx strTrace, err, strRoutine
     Set SerializeByCategory = Nothing
 
+End Function
+
+''' Creates a SeriesCollection for the TimeRecords by Category
+Private Function SerializeByWorkspace() As ArrayList
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SerializeByWorkspace"
+    
+    On Error GoTo ThrowException
+    
+    Dim SeriesCollection As New ArrayList
+    
+    ' Common variables
+    Dim tr As fmeTimeRecord
+    Dim s As Variant
+            
+    ' Create a series for each Workspace
+    Dim wsp As fmeWorkspace
+    Dim bFnd As Boolean
+    Dim ser As Series
+    Dim focusSeries As Series
+    Dim sp As SeriesPoint
+    For Each tr In myItems
+    
+        ' Get the assigned Workspace
+        Set wsp = tr.Workspace
+        If Not wsp Is Nothing Then
+            s = wsp.Name
+        Else
+            ' No Workspace Assigned
+            s = "None"
+        End If
+        
+        ' Check to see if Series exists for this category
+        bFnd = False
+        For Each ser In SeriesCollection
+            If ser.Name = s Then
+                Set focusSeries = ser
+                bFnd = True
+                Exit For
+            End If
+        Next
+        
+        If Not bFnd Then
+            ' Create a new series
+            Set focusSeries = New Series
+            focusSeries.Name = s
+            
+            ' Add it to the collection
+            SeriesCollection.Add focusSeries
+        End If
+        
+        ' Add this timeRecord to the series
+        Set sp = New SeriesPoint
+        Call sp.Create(GetDateOnly(tr.RecordDate), tr.DurationHours)
+        focusSeries.Add sp
+
+    Next
+    
+    ' Sort collection by category name
+    Dim sColl As New SortCollection
+    sColl.Sort "Name", SeriesCollection
+    
+    ' Return sorted series collection
+    Set SerializeByWorkspace = sColl.List ' SeriesCollection
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set SerializeByWorkspace = Nothing
+    
 End Function
 
 Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
@@ -701,7 +877,7 @@ Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
 
     strTrace = "Create table to return."
     Dim dt As New DataTable
-    dt.name = tblName
+    dt.Name = tblName
     
     ' Common Variables
     Dim dr As DataRow
@@ -807,7 +983,7 @@ Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
     If includeHeaderRow Then
         Set hdrRow = New DataRow
         For Each col In dt.Columns.Items
-            hdrRow.Add col.name, col.name
+            hdrRow.Add col.Name, col.Name
         Next
         dt.rows.AddRow hdrRow
     End If
@@ -825,8 +1001,8 @@ Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
             totRow.Add RowNameHeaderLabel, "------ Totals"
         End If
         For Each col In dt.Columns.Items
-            If col.name <> RowNameHeaderLabel Then
-                totRow.Add col.name, 0
+            If col.Name <> RowNameHeaderLabel Then
+                totRow.Add col.Name, 0
             End If
         Next
     End If
@@ -836,7 +1012,7 @@ Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
     ' Populate the body of the table
     Dim colName As String
     For Each ser In sColl
-        strTrace = "Creating a row for series: " & ser.name
+        strTrace = "Creating a row for series: " & ser.Name
         ' Create a Row for each series in the collection
         '   with totals for each date
         Set dr = New DataRow
@@ -844,7 +1020,7 @@ Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
         Dim iColStart As Integer
         iColStart = 0
         If includeRowName Then
-            dr.Add RowNameHeaderLabel, ser.name
+            dr.Add RowNameHeaderLabel, ser.Name
             iColStart = 1
         End If
         
@@ -859,7 +1035,7 @@ Private Function ConvertSeriesCollectionToTable(ByVal tblName As String, _
         '   adding zero points where no values are found
         Dim dte As Date
         For i = iColStart To dt.Columns.Count - cDiff
-            colName = dt.Columns.Item(i).name
+            colName = dt.Columns.Item(i).Name
             dte = CDate(colName)
             If ser.TryGetPoint(dte, sp) Then
                 ' Populate the Point value

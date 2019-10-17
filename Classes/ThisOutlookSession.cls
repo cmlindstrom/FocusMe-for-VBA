@@ -222,20 +222,17 @@ Private Sub Application_Startup()
     strTrace = "Starting FocusMe for VBA macro code..."
     LogMessage strTrace, strRoutine
 
-    ' Set ReplyButton = Application.ActiveExplorer.CommandBars.FindControl(, 354)
+   ' Set ReplyButton = Application.ActiveExplorer.CommandBars.FindControl(, 354)
    
-    ' Set up FME Profile {folder tracking to start}
-    Set f_profile = New fmeProfile
+   ' Set up FME Profile {folder tracking to start}
+   Set f_profile = New fmeProfile
    
-    ' Inter App messaging service
-    Set f_queue = New MemoryLogger
+   ' Inter App messaging service
+   Set f_queue = New MemoryLogger
    
-    ' Initialize Collections
-    Set MailItems = New ArrayList
+   ' Initialize Collections
+   Set MailItems = New ArrayList
    
-    ' Handle first time setup
-    Call FirstTimeSetup
-       
     ' Get Settings
     Dim stgs As New Settings
     Dim bShow As Boolean
@@ -257,16 +254,8 @@ Private Sub Application_Startup()
 End Sub
 
 Private Sub Application_Quit()
-
-    ' Keep the logs in check
-    Common.TrimLogs
-    
-    ' Release memory objects
     Set frm = Nothing
     Set frmProjects = Nothing
-    Set f_queue = Nothing
-    Set f_profile = Nothing
-    
 End Sub
 
 ' --- Methods
@@ -527,30 +516,4 @@ ThrowException:
 
 End Sub
 
-''' Sets up the DataStore on the first run of the App
-Private Sub FirstTimeSetup()
 
-    Dim strTrace As String
-    Dim strRoutine As String
-    strRoutine = rootClass & ":FirstTimeSetup"
-    
-    On Error GoTo ThrowException
-    
-    Dim bFirst As Boolean
-    
-    Dim st As New Setup
-    bFirst = st.IsFirstTime
-    If bFirst Then
-        Dim frm As New frm_Welcome
-        frm.Show
-    Else
-        strTrace = "DataStore exists - first time run ignored."
-        LogMessage strTrace, strRoutine
-    End If
-        
-    Exit Sub
-    
-ThrowException:
-    LogMessageEx strTrace, err, strRoutine
-
-End Sub

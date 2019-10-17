@@ -114,8 +114,8 @@ Private Sub myListView_ColumnClick(ByVal ColumnHeader As MSComctlLib.ColumnHeade
     strRoutine = rootClass & ":myListView_ColumnClick"
     
     Dim selectSortOn As enuSortOn
-    If InStr(1, LCase(ColumnHeader.Key), "name") Then selectSortOn = Name
-    If InStr(1, LCase(ColumnHeader.Key), "code") Then selectSortOn = Code
+    If InStr(1, LCase(ColumnHeader.key), "name") Then selectSortOn = Name
+    If InStr(1, LCase(ColumnHeader.key), "code") Then selectSortOn = Code
     
     If Not sortingColumn = selectSortOn Then
         ' Sorting Column changed
@@ -132,6 +132,39 @@ Private Sub myListView_ColumnClick(ByVal ColumnHeader As MSComctlLib.ColumnHeade
 
 End Sub
 
+Private Sub myListView_DblClick()
+
+    If f_SuspendUI Then Exit Sub
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":myListView_DblClick"
+    
+    On Error GoTo ThrowException
+    
+    Dim li As ListItem
+    Set li = myListView.SelectedItem
+
+    Dim eid As String
+    eid = li.key
+    Dim p As fmeProject
+    Set p = GetItemById(eid)
+    If IsNothing(p) Then
+        strTrace = "Failed select the project, id: " & eid
+        GoTo ThrowException
+    End If
+    
+    Set selItem = p
+    
+    OpenProject p
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
 ''' Allows the ability to track multi-selection
 Private Sub myListView_ItemCheck(ByVal Item As MSComctlLib.ListItem)
 
@@ -144,7 +177,7 @@ Private Sub myListView_ItemCheck(ByVal Item As MSComctlLib.ListItem)
     On Error GoTo ThrowException
 
     Dim eid As String
-    eid = Item.Key
+    eid = Item.key
     Dim p As fmeProject
     Set p = GetItemById(eid)
     If IsNothing(p) Then
@@ -178,7 +211,7 @@ Private Sub myListView_ItemClick(ByVal Item As MSComctlLib.ListItem)
     On Error GoTo ThrowException
 
     Dim eid As String
-    eid = Item.Key
+    eid = Item.key
     Dim p As fmeProject
     Set p = GetItemById(eid)
     If IsNothing(p) Then
@@ -195,7 +228,7 @@ ThrowException:
     
 End Sub
 
-Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
+Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
 
     If f_SuspendUI Then Exit Sub
 
@@ -212,7 +245,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
     
 End Sub
 
-Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single)
+Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, x As Single, y As Single)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -232,9 +265,9 @@ Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Lon
 
 End Sub
 
-Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single, State As Integer)
+Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, x As Single, y As Single, State As Integer)
     Effect = 1
-    Set myListView.DropHighlight = myListView.HitTest(X * 15, y * 20)
+    Set myListView.DropHighlight = myListView.HitTest(x * 15, y * 20)
 End Sub
 
 ' Project Properties form
@@ -395,7 +428,7 @@ Public Function GetItemById(ByVal id As String) As fmeProject
     
 ThrowException:
     LogMessageEx strTrace, err, strRoutine
-    Set ImportFromMCL = Nothing
+    Set GetItemById = Nothing
 
 End Function
 
@@ -519,6 +552,8 @@ Public Sub DeleteProject(Optional ByVal p As fmeProject = Nothing)
     Dim strRoutine As String
     strRoutine = rootClass & ":DeleteProject"
     
+    On Error GoTo ThrowException
+    
     If p Is Nothing Then
         Set p = selItem
     Else
@@ -530,27 +565,46 @@ Public Sub DeleteProject(Optional ByVal p As fmeProject = Nothing)
         GoTo ThrowException
     End If
     
+    Dim ds As New dsDataStore
+    
     strTrace = "Are you sure you want to delete: " & vbCrLf & vbCrLf & _
                 p.Subject
     Dim dResult As VbMsgBoxResult
     dResult = MsgBox(strTrace, vbQuestion Or vbYesNo, "Title")
     If dResult = vbYes Then
+    
+        ' Open the datastore
+        ds.Connect
+        
+        ' Delete the Project from DataStore
+        ds.Delete p, "Project"
             
         strTrace = "Removed Project: " & p.Subject & " from the datastore."
         LogMessage strTrace, strRoutine
-    
-        ' Delete the Task from Outlook
-        ' t.Delete
-    
+        
+        '  Delete the Project from the MCL
+        Dim catName As String
+        catName = p.Subject
+        If Not p.CombineTitleCode Then catName = p.Name
+        ut.RemoveFromMCL catName
+        
+        strTrace = "Removed Project: " & catName & " from the Master Category List."
+        LogMessage strTrace, strRoutine
+        
         ' Update UI
         DeleteListViewItem p
 
     End If
     
-    Exit Sub
+    GoTo Finally
     
 ThrowException:
     LogMessageEx strTrace, err, strRoutine
+
+Finally:
+    ' Commit changes to the XML file if a 'delete' has occured
+    If ds.IsConnected Then ds.Disconnect
+    Set ds = Nothing
 
 End Sub
 
@@ -562,7 +616,7 @@ Private Function GetProjectsFromDB() As ArrayList
     Dim strTrace As String
     strTrace = "General Fault."
     Dim strRoutine As String
-    strRoutine = rootClass & ":TrackSelectedItems"
+    strRoutine = rootClass & ":GetProjectsFromDB"
     
     On Error GoTo ThrowException
 
@@ -571,7 +625,7 @@ Private Function GetProjectsFromDB() As ArrayList
     
     strTrace = "Get local Folder collection."
     Dim arItems As ArrayList
-    Set arItems = ldb.GetEntireCollection("Project")
+    Set arItems = ldb.GetCollection("Project")
     If arItems Is Nothing Then
         strTrace = "Local datastore query failed."
         GoTo ThrowException
@@ -587,7 +641,7 @@ End Function
 
 ' - - Collection Supporting Methods
 
-Private Sub TrackSelectedItems(ByVal p As fmeProject, ByVal action As String)
+Private Sub TrackSelectedItems(ByVal p As fmeProject, ByVal Action As String)
 
     Dim strTrace As String
     strTrace = "General Fault."
@@ -604,7 +658,7 @@ Private Sub TrackSelectedItems(ByVal p As fmeProject, ByVal action As String)
     Dim exProject As fmeProject
     Set exProject = selItems.GetItemById(p.id)
     
-    If InStr(1, LCase(action), "add") > 0 Then
+    If InStr(1, LCase(Action), "add") > 0 Then
         If Not exProject Is Nothing Then
             strTrace = "Cannot add a Project more than once to the selected Items, id: " & p.id
             LogMessage "WARNING: " & strTrace, strRoutine
@@ -612,7 +666,7 @@ Private Sub TrackSelectedItems(ByVal p As fmeProject, ByVal action As String)
             selItems.AddItem p
         End If
     End If
-    If InStr(1, LCase(action), "rem") > 0 Then
+    If InStr(1, LCase(Action), "rem") > 0 Then
         If exProject Is Nothing Then
             strTrace = "Cannot remove a project that is not currently in the selected items, id: " & p.id
             LogMessage "WARNING: " & strTrace, strRoutine
@@ -712,7 +766,7 @@ Private Sub UpdateListViewItem(ByVal p As fmeProject)
     Set li = FindListViewItem(p)
     If Not IsNothing(li) Then
         ' Update list view here
-        li.Text = p.Name
+        li.text = p.Name
         li.SubItems(1) = p.Code
                       
         ' Format the row
@@ -784,7 +838,7 @@ Private Function FindListViewItem(ByVal p As fmeProject) As ListItem
     For i = 1 To myListView.ListItems.Count
         Dim li As ListItem
         Set li = myListView.ListItems(i)
-        If li.Key = p.id Then
+        If li.key = p.id Then
             Set retItem = li
             Exit For
         End If
@@ -899,7 +953,7 @@ Private Sub ResizeLVColumns()
     ' if scrollbar present, make space
     Dim bScrollbar As Boolean
     With myListView
-        bScrollbar = (.Font.Size + 4 + 1) * .ListItems.Count > .Height
+        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.Count > .Height
     End With
     
     If bScrollbar Then totWidth = totWidth - 15
@@ -921,7 +975,7 @@ ThrowException:
     
 End Sub
 
-Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
+Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
                               ByVal y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
@@ -931,12 +985,12 @@ Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
     ' - "on most computers 1 pixel = 15 TWIPS"
     '    https://stackoverflow.com/questions/36442535/vba-drag-drop-from-treeview-to-listview-listview-to-treeview-activex-controls
     Dim xInt As Single
-    xInt = X
+    xInt = x
     Dim yInt As Single
     yInt = y
            
     Dim li As ListItem
-    Set li = myListView.HitTest(X * factor, y * factor)
+    Set li = myListView.HitTest(x * factor, y * factor)
         
     Set LV_GetItemAt = li
         
