@@ -71,6 +71,29 @@ Public Function Count() As Integer
     Count = myItems.Count
 End Function
 
+Public Sub Clear()
+    myItems.Clear
+End Sub
+
+''' Returns True if the specified item is in the collection
+Public Function IsItemPresent(ByVal eid As String) As Boolean
+
+    Dim bReturn As Boolean
+    bReturn = False
+
+    Dim c As Outlook.ContactItem
+    Set c = GetItemById(eid)
+    If Not IsNothing(c) Then
+        bReturn = True
+    Else
+        bReturn = False
+    End If
+    
+    IsItemPresent = bReturn
+
+End Function
+
+
 ''' Returns a Contact from the collection matching the specified id
 Public Function GetItemById(ByVal id As String) As Outlook.ContactItem
 

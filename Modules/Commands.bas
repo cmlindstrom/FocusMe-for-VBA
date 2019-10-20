@@ -4,6 +4,8 @@ Attribute VB_Name = "Commands"
     Private Const rootClass As String = "FME_Commands"
     
     Public Const AppName As String = "FocusMe for VBA"
+    
+    Public Const AppVersion As String = "1.0.24"
 
     Public Const DefaultLongStringLength As Integer = 3990
 

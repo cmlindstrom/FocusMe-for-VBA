@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} FME_Pane 
    Caption         =   "Task List"
-   ClientHeight    =   8235
+   ClientHeight    =   8235.001
    ClientLeft      =   75
    ClientTop       =   465
    ClientWidth     =   4710
@@ -13,6 +13,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
+
 
 ' - - Fields
 
@@ -215,7 +216,11 @@ Private Sub ts_Tasks_Change()
     Set tb = ts_Tasks.SelectedItem
     tabView = tb.Caption
     
+    ' Refresh the item list
     RefreshView tabView
+    
+    ' Control buttons to present
+    Call SetButtons
         
 End Sub
 
@@ -420,6 +425,24 @@ Public Sub Status(Optional msg As String = "")
 End Sub
 
 ' - -  Supporting Methods
+
+Private Sub SetButtons()
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SetButtons"
+
+    If controller = TaskManager Then
+        btn_Related.Visible = True
+        btn_Projects.Visible = True
+    End If
+    If controller = ProjectManager Then
+        btn_Related.Visible = False
+        btn_Projects.Visible = False
+    End If
+    
+End Sub
 
 Private Sub RefreshView(ByVal tabName As String, _
                 Optional ByVal strFilter As String = "")
@@ -872,7 +895,7 @@ Private Sub lstbx_Tasks_BeforeDragOver(ByVal Cancel As MSForms.ReturnBoolean, By
     Effect = fmDropEffectCopy
 End Sub
 
-Private Sub lstbx_Tasks_BeforeDropOrPaste(ByVal Cancel As MSForms.ReturnBoolean, ByVal action As MSForms.fmAction, ByVal Data As MSForms.DataObject, ByVal x As Single, ByVal y As Single, ByVal Effect As MSForms.ReturnEffect, ByVal Shift As Integer)
+Private Sub lstbx_Tasks_BeforeDropOrPaste(ByVal Cancel As MSForms.ReturnBoolean, ByVal Action As MSForms.fmAction, ByVal Data As MSForms.DataObject, ByVal x As Single, ByVal y As Single, ByVal Effect As MSForms.ReturnEffect, ByVal Shift As Integer)
     Effect = fmDropEffectNone
     
     Dim strTrace As String

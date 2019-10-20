@@ -58,10 +58,18 @@ Public Property Get SelectedItem() As Outlook.ContactItem
     Set SelectedItem = selItem
 End Property
 
-''' Currently selected Collection of Tasks
+''' Currently selected Collection of Contacts
 Public Property Get SelectedItems() As Contacts
     Set SelectedItems = selItems
 End Property
+
+''' Number of items that are checked
+Public Property Get ItemsChecked() As Integer
+    Dim i As Integer
+    i = selItems.Count
+    ItemsChecked = i
+End Property
+
 
 ''' Managed ListView
 Public Property Set ListView(ByVal lv As MSComctlLib.ListView)
@@ -97,6 +105,7 @@ Public Property Get SuspendUIEvents() As Boolean
     SuspendUIEvents = f_SuspendUI
 End Property
 
+
 ' - Event Handlers
 Private Sub singleInspector_Activate()
 
@@ -110,7 +119,7 @@ Private Sub singleInspector_Close()
     
     On Error GoTo ThrowException
     
-    ' Check last mod date - this will error if task
+    ' Check last mod date - this will error if contact
     '   has been deleted
     strTrace = selItem.LastModificationTime
     
@@ -171,10 +180,49 @@ Private Sub myListView_ItemClick(ByVal Item As MSComctlLib.ListItem)
     
 End Sub
 
+Private Sub myListView_ItemCheck(ByVal Item As MSComctlLib.ListItem)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":myListView_ItemCheck"
+    
+    If f_SuspendUI Then Exit Sub
+    
+    Dim eid As String
+    eid = Item.key
+    Dim c As Outlook.ContactItem
+    Set c = ut.GetOutlookItemFromID(eid)
+    If Not IsNothing(c) Then
+        If Item.checked Then
+            ' Add the item to the selected items
+            If Not selItems.IsItemPresent(eid) Then
+                selItems.AddItem c
+            Else
+                strTrace = "Attempted to add a duplicate contact to the selected items."
+                LogMessage "WARNING: " & strTrace, strRoutine
+            End If
+        Else
+            ' Remove the item from the selected items
+            Dim ct As Outlook.ContactItem
+            Set ct = selItems.GetItemById(eid)
+            If Not IsNothing(ct) Then
+                strTrace = "Remove contact from selected items; eid: " & eid & "."
+                selItems.RemoveItem ct
+            End If
+        End If
+    Else
+        strTrace = "Failed to find an Outlook Item for a known good EntryID: '" & eid & "'."
+        LogMessage "WARNING: " & strTrace, strRoutine
+    End If
+    
+
+End Sub
+
 ' - Constructor
 
 Private Sub Class_Initialize()
     Set myItems = New Contacts
+    Set selItems = New Contacts
     
     Set oNS = GetNamespace("MAPI")
     Set app = oNS.Application
@@ -257,6 +305,437 @@ Public Sub Sort(ByVal srt As enuSortOn, ByVal dir As enuSortDirection)
     Call Refresh
     
 End Sub
+
+' - Contact Item Commands
+
+''' Opens an existing contact
+Public Sub OpenContact(Optional ByVal c As Outlook.ContactItem = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":OpenContact"
+    
+    On Error GoTo ThrowException
+
+    If c Is Nothing Then
+        Set c = selItem
+    Else
+        Set selItem = c
+    End If
+    
+    If IsNothing(c) Then
+        strTrace = "Incoming OutlookItem was null."
+        GoTo ThrowException
+    End If
+
+   ' Prepare to present Outlook Task UI
+    Set singleInspector = c.GetInspector
+    
+    ' Show the Item using the Outlook interface
+    c.Display
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+''' Creates a new Contact to Edit
+Public Sub NewContact(Optional p As fmeProject = Nothing)
+
+    ' Create a new Contact
+    Dim c As Outlook.ContactItem
+    Set c = ut.CreateContact
+    
+    ' If a project provided, assign task to the Project
+    If Not p Is Nothing Then c.Categories = p.Subject
+    
+    ' Prepare to present Outlook Contact UI
+    Set selItem = c
+    Set singleInspector = c.GetInspector
+    
+    ' Show the Contact using the Outlook interface
+    c.Display
+
+End Sub
+
+''' Remove from Project
+Public Sub RemoveContactProject(ByVal p As fmeProject, _
+                       Optional ByVal c As Outlook.ContactItem = Nothing)
+                       
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":RemoveContactProject"
+
+    If p Is Nothing Then
+        Exit Sub
+    End If
+
+    If c Is Nothing Then c = selItem
+
+    ' Get the list of projects
+    Dim pm As New ProjectManager
+    pm.Load
+    
+    ' Get the contact's projects
+    Dim currProjs As ArrayList
+    Set currProjs = pm.ParseProjectsFromString(c.Categories)
+    
+    ' Remove specified project from contact's project list
+    Dim tp As fmeProject
+    For Each tp In currProjs
+        If LCase(p.Subject) = LCase(tp.Subject) Then
+            ' remove project from contact's list
+            currProjs.Remove tp
+            ' Log
+            strTrace = "INFO: Removed project: " & tp.Subject & " from Contact."
+            LogMessage strTrace, strRoutine
+            Exit For
+        End If
+    Next
+    
+    ' Rewrite contact's categories
+    
+    
+    
+End Sub
+
+''' Send Email to contact
+Public Sub NewEmail(Optional p As fmeProject = Nothing, _
+                    Optional ByVal c As Outlook.ContactItem = Nothing, _
+                    Optional useBCC As Boolean = False)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":NewEmail"
+    
+    On Error GoTo ThrowException
+
+    If c Is Nothing Then Set c = selItem
+    
+    If IsNothing(c) Then
+        strTrace = "Incoming OutlookItem was null."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Create a new email."
+    Dim m As Outlook.MailItem
+    Set m = ut.CreateMailItem
+    If IsNothing(m) Then
+        strTrace = "Failed to create a new mailItem."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Get the contact's email address(es)"
+    Dim eList As ArrayList
+    Set eList = GetEmailAddresses(c)
+    If eList.Count = 0 Then
+        strTrace = "No email addresses found."
+        GoTo ThrowException
+    End If
+    
+    Dim delim As String
+    delim = ut.GetLocalizedDelimiter
+    
+    strTrace = "Assemble the email to or BCC string."
+    Dim strCat As String
+    Dim s As Variant
+    For Each s In eList
+        strCat = strCat & s & delim
+    Next
+    strCat = Left(strCat, Len(strCat) - 1)
+    
+    If useBCC Then
+        m.BCC = strCat
+    Else
+        m.To = strCat
+    End If
+    
+    strTrace = "Assign to a project, if specified."
+    If Not IsNothing(p) Then m.Categories = p.Subject
+    
+    strTrace = "Display the new email."
+    m.Display
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+''' Send Email to collection of contacts
+Public Sub NewGroupEmail(Optional ByVal p As fmeProject = Nothing, _
+                         Optional ByVal useBCC As Boolean = False)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":NewGroupEmail"
+    
+    On Error GoTo ThrowException
+    
+    If selItems.Count = 0 Then
+        strTrace = "No contacts were selected."
+        GoTo ThrowException
+    End If
+    If selItems.Count = 1 Then
+        Call NewEmail(p, selItems.Items(0), useBCC)
+        Exit Sub
+    End If
+    
+    strTrace = "Create a new email."
+    Dim m As Outlook.MailItem
+    Set m = ut.CreateMailItem
+    If IsNothing(m) Then
+        strTrace = "Failed to create a new mailItem."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Gather email addresses from each contact."
+    Dim s As Variant
+    Dim aList As ArrayList
+    Set aList = New ArrayList
+    
+    Dim eList As ArrayList
+    Dim tc As Outlook.ContactItem
+    For Each tc In selItems.Items
+        strTrace = "Get the contact's email address(es)"
+        Set eList = GetEmailAddresses(tc)
+        If eList.Count > 0 Then
+            For Each s In eList
+                aList.Add s
+            Next
+        Else
+            strTrace = "No email addresses found for '" & tc.FullName & "'."
+            LogMessage strTrace, strRoutine
+        End If
+    Next
+           
+    Dim delim As String
+    delim = ut.GetLocalizedDelimiter
+    
+    strTrace = "Assemble the email to or BCC string."
+    Dim strCat As String
+    For Each s In aList
+        strCat = strCat & s & delim
+    Next
+    strCat = Left(strCat, Len(strCat) - 1)
+    
+    If useBCC Then
+        m.BCC = strCat
+    Else
+        m.To = strCat
+    End If
+    
+    strTrace = "Assign to a project, if specified."
+    If Not IsNothing(p) Then m.Categories = p.Subject
+    
+    strTrace = "Display the new email."
+    m.Display
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+''' Schedule a new calendar event with the Contact
+Public Sub ScheduleMeeting(Optional p As fmeProject = Nothing, _
+                           Optional ByVal c As Outlook.ContactItem = Nothing)
+                    
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":ScheduleMeeting"
+    
+    On Error GoTo ThrowException
+
+    If c Is Nothing Then Set c = selItem
+    
+    If IsNothing(c) Then
+        strTrace = "Incoming OutlookItem was null."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Get the contact's email address(es)"
+    Dim eList As ArrayList
+    Set eList = GetEmailAddresses(c)
+    If eList.Count = 0 Then
+        strTrace = "No email addresses found."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Create a new appointment."
+    Dim a As Outlook.AppointmentItem
+    Set a = ut.CreateAppointment
+    If IsNothing(a) Then
+        strTrace = "Failed to create a new appointmentItem."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Set the appointment as a meeting."
+    a.MeetingStatus = olMeeting
+    
+    strTrace = "Add recipients using their email addresses."
+    Dim s As Variant
+    For Each s In eList
+        a.Recipients.Add s
+    Next
+    ' Resolve the email addresses to contacts
+    a.Recipients.ResolveAll
+       
+    strTrace = "Assign to a project, if specified."
+    If Not IsNothing(p) Then a.Categories = p.Subject
+    
+    strTrace = "Display the new meeting request."
+    a.Display
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
+''' Schedule a meeting with a collection of contacts
+Public Sub ScheduleGroupMeeting(Optional ByVal p As fmeProject = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":ScheduleGroupMeeting"
+    
+    On Error GoTo ThrowException
+    
+    If selItems.Count = 0 Then
+        strTrace = "No contacts were selected."
+        GoTo ThrowException
+    End If
+    If selItems.Count = 1 Then
+        Call ScheduleMeeting(p, selItems(0))
+        Exit Sub
+    End If
+    
+    strTrace = "Gather email addresses from each contact."
+    Dim s As Variant
+    Dim aList As ArrayList
+    Set aList = New ArrayList
+    
+    Dim eList As ArrayList
+    Dim tc As Outlook.ContactItem
+    For Each tc In selItems.Items
+        strTrace = "Get the contact's email address(es)"
+        Set eList = GetEmailAddresses(tc)
+        If eList.Count > 0 Then
+            For Each s In eList
+                aList.Add s
+            Next
+        Else
+            strTrace = "No email addresses found for '" & tc.FullName & "'."
+            LogMessage strTrace, strRoutine
+        End If
+    Next
+           
+    strTrace = "Create a new appointment."
+    Dim a As Outlook.AppointmentItem
+    Set a = ut.CreateAppointment
+    If IsNothing(a) Then
+        strTrace = "Failed to create a new appointmentItem."
+        GoTo ThrowException
+    End If
+    
+    strTrace = "Set the appointment as a meeting."
+    a.MeetingStatus = olMeeting
+    
+    strTrace = "Add recipients using their email addresses."
+    For Each s In aList
+        a.Recipients.Add s
+    Next
+    ' Resolve the email addresses to contacts
+    a.Recipients.ResolveAll
+       
+    strTrace = "Assign to a project, if specified."
+    If Not IsNothing(p) Then a.Categories = p.Subject
+    
+    strTrace = "Display the new meeting request."
+    a.Display
+       
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+                         
+End Sub
+
+''' Gets a list of email addresses for the Contact
+Public Function GetEmailAddresses(Optional ByVal c As Outlook.ContactItem) As ArrayList
+                                  
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetEmailAddresses"
+    
+    On Error GoTo ThrowException
+
+    If c Is Nothing Then Set c = selItem
+    
+    If IsNothing(c) Then
+        strTrace = "Incoming OutlookItem was null."
+        GoTo ThrowException
+    End If
+
+    Dim retList As ArrayList
+    Set retList = New ArrayList
+    
+    Dim tmpList As ArrayList
+    Set tmpList = New ArrayList
+    
+    Dim s As Variant
+    Dim ts As Variant
+    Dim strAddress As String
+    
+    ' Gather email addresses
+    If Len(c.Email1Address) > 0 Then
+        strAddress = ut.GetSMTPEmailAddressFromContactEmailEntry( _
+                            c.Email1DisplayName, c.Email1Address, c.Email1AddressType)
+        If Len(strAddress) > 0 Then tmpList.Add strAddress
+    End If
+    If Len(c.Email2Address) > 0 Then
+        strAddress = ut.GetSMTPEmailAddressFromContactEmailEntry( _
+                            c.Email2DisplayName, c.Email2Address, c.Email2AddressType)
+        If Len(strAddress) > 0 Then tmpList.Add strAddress
+    End If
+    If Len(c.Email3Address) > 0 Then
+        strAddress = ut.GetSMTPEmailAddressFromContactEmailEntry( _
+                            c.Email3DisplayName, c.Email3Address, c.Email3AddressType)
+        If Len(strAddress) > 0 Then tmpList.Add strAddress
+    End If
+    
+    ' Deduplicate if needed
+    Dim bFnd As Boolean
+    If tmpList.Count > 1 Then
+        For Each s In tmpList
+            bFnd = False
+            For Each ts In retList
+                If LCase(ts) = LCase(s) Then
+                    bFnd = True
+                    Exit For
+                End If
+            Next
+            If Not bFnd Then retList.Add s
+        Next
+    Else
+        Set retList = tmpList
+    End If
+
+    Set GetEmailAddresses = retList
+    Exit Function
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetEmailAddresses = New ArrayList
+
+End Function
 
 ' - - Managed UI
 
@@ -676,6 +1155,9 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     
     ' Reset these...
     myListView.ColumnHeaders.Clear
+    
+    selItems.Items.Clear
+    Set selItem = Nothing
     
     ' Setup ListView Columns and Configuration
     If myListView.ColumnHeaders.Count = 0 Then

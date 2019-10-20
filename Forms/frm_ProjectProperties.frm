@@ -14,6 +14,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
+
 ' - Fields
 
 Private Const rootClass As String = "frm_ProjectProperties"
@@ -258,18 +259,46 @@ End Sub
 
 Private Sub btn_AddContact_Click()
     ' Create a new contact for this project
+    cm.NewContact f_Project
 End Sub
 
 Private Sub btn_AssignContact_Click()
     ' Assign one or more contacts to this project
+    Dim s As String
+    s = "Feature not implemented."
+    MsgBox s, vbOKOnly, Commands.AppName & " - Unsupported"
 End Sub
 
+''' Edit selected contact
 Private Sub btn_EditContact_Click()
-    ' Edit selected contact
+    cm.OpenContact
 End Sub
 
+''' Remove selected contact from the project
 Private Sub btn_RemoveContact_Click()
-    ' Remove selected contact from the project
+    cm.RemoveContactProject f_Project
+End Sub
+
+Private Sub btn_ScheduleEvent_Click()
+    ' Send a calendar invite to selected contacts
+    If cm.ItemsChecked > 0 Then
+        ' Send a meeting request to the selected contacts
+        cm.ScheduleGroupMeeting f_Project
+    Else
+        ' Send a meeting request to the selected contact
+        cm.ScheduleMeeting f_Project
+    End If
+End Sub
+
+Private Sub btn_SendEmail_Click()
+    ' Send an email to selected contacts
+    If cm.ItemsChecked > 0 Then
+        ' Sends an email to the selected contacts
+        cm.NewGroupEmail f_Project
+    Else
+        ' Sends an email to the selected contact
+        cm.NewEmail f_Project
+    End If
 End Sub
 
 ' - Buttons

@@ -1563,6 +1563,28 @@ ThrowException:
 
 ' MailItems ---
 
+    ''' Create a new mailItem
+    Public Function CreateMailItem() As Outlook.MailItem
+    
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":CreateMailItem"
+        
+        On Error GoTo ThrowException
+        
+        Dim m As Outlook.MailItem
+        Set m = app.CreateItem(olMailItem)
+        
+        Set CreateMailItem = m
+        Exit Function
+        
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+        Set CreateMailItem = Nothing
+    
+    End Function
+
     ''' Retrieves a collection of Outlook objects using the specified
     ''' Filter and ItemType.  If Folders is nothing, then the Default
     ''' folder for the given itemType is used.
@@ -1837,7 +1859,152 @@ ThrowException:
         LogMessageEx strTrace, err, strRoutine
         Set GetConversationFromMailItem = Nothing
 
-        End Function
+    End Function
+        
+' Contacts --
+
+''' Create a new contact in the default contacts folder
+    Public Function CreateContact() As Outlook.ContactItem
+    
+        Dim strTrace As String
+        Dim strRoutine As String
+        strRoutine = rootClass & ":CreateContact"
+        
+        On Error GoTo ThrowException
+        
+        ' Set the destination task folder
+        Dim objFolder As Outlook.Folder
+        Set objFolder = oNS.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts)
+        If IsNothing(objFolder) Then
+            strTrace = "Unable to retrieve the contact's default folder."
+            GoTo ThrowException
+        End If
+        
+        Dim objContact As Outlook.ContactItem
+        Set objContact = objFolder.Items.Add
+
+        Set CreateContact = objContact
+        Exit Function
+                                    
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+        Set CreateContact = Nothing
+    
+    End Function
+    
+    ''' Returns the SMTP address from an OutlookContact EmailAddress Entry
+    Public Function GetSMTPEmailAddressFromContactEmailEntry( _
+                            ByVal DisplayName As String, _
+                            ByVal emailAddress As String, _
+                   Optional ByVal addrType As String = "SMTP")
+                                                                                   
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":GetEmailAddressesFromContactEmailEntry"
+        
+        Dim strSMTPAddress As String
+        
+        If Len(emailAddress) = 0 Then
+            strTrace = "An email address is required."
+            GoTo ThrowException
+        End If
+
+        If UCase(addrType) = "EX" Then
+            strSMTPAddress = GetSMTPAddressFromExchangeUser(DisplayName)
+        End If
+        If UCase(addrType) = "SMTP" Then
+            strSMTPAddress = emailAddress
+        End If
+
+        GetSMTPEmailAddressFromContactEmailEntry = strSMTPAddress
+        Exit Function
+
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+        GetSMTPEmailAddressFromContactEmailEntry = ""
+
+    End Function
+    
+    ''' <summary>
+    ''' Finds the SMTP address for a given Display Name that matches
+    ''' the Exchange Display name entry for a given Exchange user.
+    ''' </summary>
+    ''' <param name="DisplayName">String: The display in the Exchange GAL.</param>
+    ''' <returns>String:</returns>
+    ''' <remarks></remarks>
+    Public Function GetSMTPAddressFromExchangeUser(ByVal DisplayName As String) As String
+
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":GetSMTPAddressFromExchangeUser"
+                
+        strTrace = "Error checking."
+        If Len(DisplayName) = 0 Then
+            strTrace = "An empty or null Exchange Display Name was encountered."
+            GoTo ThrowException
+        End If
+
+        Dim strSMTPAddress As String
+
+        strTrace = "Resolving a Recipient for '" & DisplayName & "'."
+        LogMessage strTrace, strRoutine
+        
+        Dim oExUser As Outlook.ExchangeUser
+
+        Dim oRecipient As Outlook.Recipient
+        Set oRecipient = oNS.CreateRecipient(DisplayName)
+        oRecipient.Resolve
+        If oRecipient.Resolved Then
+            Select Case oRecipient.AddressEntry.AddressEntryUserType
+                Case Outlook.OlAddressEntryUserType.olExchangeUserAddressEntry
+                    Set oExUser = oRecipient.AddressEntry.GetExchangeUser
+                    If Not IsNothing(oExUser) Then
+                        strSMTPAddress = oExUser.PrimarySmtpAddress
+                    Else
+                        strTrace = "Failed to retrieve the Exchange User for Display name: '" & DisplayName & "'."
+                        GoTo ThrowException
+                    End If
+                Case Outlook.OlAddressEntryUserType.olExchangeRemoteUserAddressEntry
+                    Set oExUser = oRecipient.AddressEntry.GetExchangeUser
+                    If Not IsNothing(oExUser) Then
+                        strSMTPAddress = oExUser.PrimarySmtpAddress
+                    Else
+                        strTrace = "Failed to retrieve the Remote Exchange User for Display name: '" & DisplayName & "'."
+                        GoTo ThrowException
+                    End If
+                Case Outlook.OlAddressEntryUserType.olOutlookContactAddressEntry
+                    Set oExUser = oRecipient.AddressEntry.GetExchangeUser
+                    If Not IsNothing(oExUser) Then
+                        strSMTPAddress = oExUser.PrimarySmtpAddress
+                    Else
+                        strTrace = "Failed to retrieve the Exchange User for Display name: '" & DisplayName & "'."
+                        GoTo ThrowException
+                    End If
+                Case Outlook.OlAddressEntryUserType.olExchangeDistributionListAddressEntry
+                    Dim oExDistList As Outlook.ExchangeDistributionList
+                    Set oExDistList = oRecipient.AddressEntry.GetExchangeDistributionList
+                    If Not IsNothing(oExDistList) Then
+                        strSMTPAddress = oExDistList.PrimarySmtpAddress
+                    End If
+                Case Else
+                    strTrace = "Failed to retrieve an SMTP address for Display name: '" & DisplayName & "'."
+                    GoTo ThrowException
+            End Select
+        Else
+            strTrace = "Failed to resolve the Exchange User for Display name: '" & DisplayName & "'."
+            GoTo ThrowException
+        End If
+
+        GetSMTPAddressFromExchangeUser = strSMTPAddress
+        Exit Function
+
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+        GetSMTPAddressFromExchangeUser = ""
+
+    End Function
 
 ' Tasks ---
 
@@ -1847,6 +2014,8 @@ ThrowException:
         Dim strTrace As String
         Dim strRoutine As String
         strRoutine = rootClass & ":CreateTask"
+        
+        On Error GoTo ThrowException
         
         ' Set the destination task folder
         Dim objFolder As Outlook.Folder
@@ -1863,7 +2032,8 @@ ThrowException:
         Exit Function
                                     
 ThrowException:
-        LogMessage strTrace, strRoutine
+        LogMessageEx strTrace, err, strRoutine
+        Set CreateTask = Nothing
     
     End Function
     
@@ -2045,6 +2215,28 @@ ThrowException:
                                      
                                      
 ' Appointments ---
+
+    ''' Create a new appointmentItem
+    Public Function CreateAppointment() As Outlook.AppointmentItem
+    
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":CreateAppointment"
+        
+        On Error GoTo ThrowException
+        
+        Dim a As Outlook.AppointmentItem
+        Set a = app.CreateItem(olAppointmentItem)
+        
+        Set CreateAppointment = a
+        Exit Function
+        
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+        Set CreateAppointment = Nothing
+    
+    End Function
                  
     ''' <summary>
     ''' Creates an Outlook.Appointment from the specified object

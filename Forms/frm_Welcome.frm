@@ -79,9 +79,14 @@ Private Sub btn_Cancel_Click()
 
 End Sub
 
+Private Sub btn_About_Click()
+
+End Sub
+
 ' - Constructor
 
 Private Sub UserForm_Initialize()
+
     Me.Caption = Commands.AppName & " - Welcome"
     
     ' For now

@@ -455,7 +455,7 @@ Public Function ParseProjectsFromString(ByVal strCat As String) As ArrayList
     Set retList = New ArrayList
     
     Dim vCats() As String
-    vCats = Split(strCat, ";")
+    vCats = Split(strCat, ut.GetLocalizedDelimiter)
     
     Dim i As Integer
     Dim myCat As String

@@ -21,12 +21,18 @@ Private Const rootClass As String = "frm_Options"
 
 Private bDirty As Boolean
 
+
 ' - - Properties
 
 ' - - Event Handlers
 
 
 ' - Buttons
+
+Private Sub btn_About_Click()
+    Dim f As New frm_About
+    f.Show
+End Sub
 
 Private Sub btn_IndexFolders_Click()
 
