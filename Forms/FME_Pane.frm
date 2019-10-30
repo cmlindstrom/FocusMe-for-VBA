@@ -15,6 +15,7 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 
 
+
 ' - - Fields
 
 Private Const rootClass As String = "FME_Pane"
@@ -189,8 +190,92 @@ Private Sub txtbx_Search_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal S
     
 End Sub
 
+Private Sub txtbx_Status_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+    If Button = 1 Then
+        anchorX = X
+        anchorY = Y
+    End If
+End Sub
+
+Private Sub txtbx_Status_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+    
+    Dim strTrace As String
+    
+    If Button = 1 Then
+        ' Move the window
+        strTrace = "Left button down: " & leftMouseDown & " X: " & X
+        ' LogMessage strTrace, rootClass & ":txtbx_Status_MouseMove"
+        MoveFMEWindow X, Y
+        
+        
+    End If
+    
+End Sub
+
+Private Sub MoveFMEWindow(ByVal X As Single, ByVal Y As Single)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":MoveWindow"
+    
+    On Error GoTo ThrowException
+    
+    Dim newX As Long
+    Dim newY As Long
+    
+    Dim diffX As Long
+    Dim diffY As Long
+    diffX = X - anchorX
+    diffY = anchorY - Y
+
+    newX = Me.Left + diffX
+    newY = Me.Top + diffY
+    
+'    If SetFormPosition(Me, newX, newY) Then
+'
+'    Else
+'
+'    End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+Private Sub UserForm_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+
+    Dim strTrace As String
+
+    If Button = 1 Then
+        strTrace = "Left Mouse Up."
+        leftMouseDown = False
+    End If
+    If Button = 2 Then
+        strTrace = "Right Mouse Up."
+        rightMouseDown = False
+    End If
+
+End Sub
+
+Private Sub UserForm_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+
+    Dim strTrace As String
+
+    If Button = 1 Then
+        strTrace = "Left Mouse Down."
+        leftMouseDown = True
+    End If
+    If Button = 2 Then
+        strTrace = "Right Mouse Down."
+        rightMouseDown = True
+    End If
+
+End Sub
+
 ' - Form Event Handlers
-Private Sub UserForm_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Single, ByVal y As Single)
+Private Sub UserForm_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
 
     Dim Effect As Integer
 
@@ -201,8 +286,8 @@ Private Sub UserForm_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, 
        ' Effect = myDO.StartDrag
         
         ' Track location of mouse pointer
-        frmX = x
-        frmY = y
+        frmX = X
+        frmY = Y
     End If
 
 End Sub
@@ -356,13 +441,13 @@ End Sub
 
 Public Sub RecordPosition()
 
-    Dim x As Long
-    Dim y As Long
-    Call WinForms.GetFormPosition(Me, x, y)
+    Dim X As Long
+    Dim Y As Long
+    Call WinForms.GetFormPosition(Me, X, Y)
     
     Dim pt As New Point
-    pt.x = x
-    pt.y = y
+    pt.X = X
+    pt.Y = Y
     Set stgs.TaskPaneLocation = pt
     stgs.Save
 
@@ -378,25 +463,25 @@ Public Sub RepositionForm()
 
     Dim pt As Point
     Set pt = stgs.TaskPaneLocation
-    Dim x As Integer
-    x = pt.x
-    Dim y As Integer
-    y = pt.y
+    Dim X As Integer
+    X = pt.X
+    Dim Y As Integer
+    Y = pt.Y
     
-    If x + Me.Width > w Then
+    If X + Me.Width > w Then
         ' last saved position, puts form off of the screen
         If n = 1 Then
             ' monitor may have changed since last saved position, adjust position
-            x = w - Me.Width - 10
+            X = w - Me.Width - 10
         Else
             ' most likely coordinates are ok, since > 1 monitor
         End If
     End If
     
-    f_origin.x = x
-    f_origin.y = y
+    f_origin.X = X
+    f_origin.Y = Y
     
-    Call SetFormPosition(Me, f_origin.x, f_origin.y)
+    Call SetFormPosition(Me, f_origin.X, f_origin.Y)
 
 End Sub
 
@@ -769,8 +854,8 @@ ThrowException:
     
 End Sub
 
-Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
-                              ByVal y As stdole.OLE_YPOS_PIXELS, _
+Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
+                              ByVal Y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
 
@@ -779,12 +864,12 @@ Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
     ' - "on most computers 1 pixel = 15 TWIPS"
     '    https://stackoverflow.com/questions/36442535/vba-drag-drop-from-treeview-to-listview-listview-to-treeview-activex-controls
     Dim xInt As Single
-    xInt = x
+    xInt = X
     Dim yInt As Single
-    yInt = y
+    yInt = Y
            
     Dim li As ListItem
-    Set li = lv_Tasks.HitTest(x * factor, y * factor)
+    Set li = lv_Tasks.HitTest(X * factor, Y * factor)
         
     Set LV_GetItemAt = li
         
@@ -890,12 +975,12 @@ End Sub
 
 ''' ListBox Handlers
 
-Private Sub lstbx_Tasks_BeforeDragOver(ByVal Cancel As MSForms.ReturnBoolean, ByVal Data As MSForms.DataObject, ByVal x As Single, ByVal y As Single, ByVal DragState As MSForms.fmDragState, ByVal Effect As MSForms.ReturnEffect, ByVal Shift As Integer)
+Private Sub lstbx_Tasks_BeforeDragOver(ByVal Cancel As MSForms.ReturnBoolean, ByVal Data As MSForms.DataObject, ByVal X As Single, ByVal Y As Single, ByVal DragState As MSForms.fmDragState, ByVal Effect As MSForms.ReturnEffect, ByVal Shift As Integer)
     Cancel = True
     Effect = fmDropEffectCopy
 End Sub
 
-Private Sub lstbx_Tasks_BeforeDropOrPaste(ByVal Cancel As MSForms.ReturnBoolean, ByVal Action As MSForms.fmAction, ByVal Data As MSForms.DataObject, ByVal x As Single, ByVal y As Single, ByVal Effect As MSForms.ReturnEffect, ByVal Shift As Integer)
+Private Sub lstbx_Tasks_BeforeDropOrPaste(ByVal Cancel As MSForms.ReturnBoolean, ByVal Action As MSForms.fmAction, ByVal Data As MSForms.DataObject, ByVal X As Single, ByVal Y As Single, ByVal Effect As MSForms.ReturnEffect, ByVal Shift As Integer)
     Effect = fmDropEffectNone
     
     Dim strTrace As String
@@ -945,7 +1030,7 @@ Private Sub lstbx_Tasks_AfterUpdate()
     
 End Sub
 
-Private Sub lstbx_Tasks_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Single, ByVal y As Single)
+Private Sub lstbx_Tasks_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
     
     Dim strTrace As String
     Dim strRoutine As String
@@ -977,7 +1062,7 @@ Private Sub lstbx_Tasks_MouseDown(ByVal Button As Integer, ByVal Shift As Intege
         ' Set cMenu = tm.GetContextMenu
         
         Dim id As Long
-        id = ShowPopup(Me, cMenu, x, y)
+        id = ShowPopup(Me, cMenu, X, Y)
        
         strTrace = "Selected menu item: " & id
         LogMessage strTrace, strRoutine
@@ -988,9 +1073,9 @@ Private Sub lstbx_Tasks_MouseDown(ByVal Button As Integer, ByVal Shift As Intege
 
 End Sub
 
-Private Sub lstbx_Tasks_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Single, ByVal y As Single)
-    lstX = x
-    lstY = y
+Private Sub lstbx_Tasks_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+    lstX = X
+    lstY = Y
 End Sub
 
 
