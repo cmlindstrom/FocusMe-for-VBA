@@ -22,9 +22,14 @@ Dim isEnabled As Boolean
 Dim iType As enuMenuItemType
 Dim strID As String
 Dim strTag As String
+
 Dim hasControl As Boolean
 Dim myControl As control
-Dim myMenu As ContextMenu
+
+Dim f_Menu As ContextMenu
+
+Dim f_hasSubMenu As Boolean
+Dim f_subMenu As ContextMenu
 
 Dim WithEvents lbl As MSForms.label
 Attribute lbl.VB_VarHelpID = -1
@@ -72,53 +77,70 @@ Public Property Get UID() As String
 End Property
 
 ''' A tag property
-Public Property Let tag(ByVal str As String)
+Public Property Let Tag(ByVal str As String)
     strTag = str
 End Property
-Public Property Get tag() As String
-    tag = strTag
+Public Property Get Tag() As String
+    Tag = strTag
 End Property
 
 ''' The ContextMenu this item is contained within
 Public Property Set Menu(ByVal cm As ContextMenu)
-    Set myMenu = cm
+    Set f_Menu = cm
 End Property
 Public Property Get Menu() As ContextMenu
-    Set Menu = myMenu
+    Set Menu = f_Menu
+End Property
+
+''' The ContextMenu this item launches (if it has a subMenu)
+Public Property Set SubMenu(ByVal cm As ContextMenu)
+    Set f_subMenu = cm
+    If cm Is Nothing Then
+        f_hasSubMenu = False
+    Else
+        f_hasSubMenu = True
+    End If
+End Property
+Public Property Get SubMenu() As ContextMenu
+    Set SubMenu = f_subMenu
 End Property
 
 ' - - Event Handlers
 
 ''' Labels
 Private Sub lbl_Click()
-    myMenu.Click strTag
+    f_Menu.Click strTag
     RaiseEvent Click
 End Sub
 
 Private Sub lbl_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
-    myMenu.DoubleClick strTag, Cancel
+    f_Menu.DoubleClick strTag, Cancel
     RaiseEvent DblClick(Cancel)
 End Sub
 
 Private Sub lbl_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, _
                             ByVal X As Single, ByVal Y As Single)
-    myMenu.MouseMoved strTag, Button, Shift, X, Y
-    RaiseEvent MouseMoved(Button, Shift, X, Y)
+                            
+    If Not iType = Separator Then
+        f_Menu.MouseMoved lbl.Name, Button, Shift, X, Y
+        RaiseEvent MouseMoved(Button, Shift, X, Y)
+    End If
+    
 End Sub
 
 ''' Buttons
 Private Sub btn_Click()
-    myMenu.Click strTag
+    f_Menu.Click strTag
     RaiseEvent Click
 End Sub
 
 Private Sub btn_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
-    myMenu.DoubleClick strTag, Cancel
+    f_Menu.DoubleClick strTag, Cancel
     RaiseEvent DblClick(Cancel)
 End Sub
 
 Private Sub btn_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
-    myMenu.MouseMoved strTag, Button, Shift, X, Y
+    f_Menu.MouseMoved btn.Name, Button, Shift, X, Y
     RaiseEvent MouseMoved(Button, Shift, X, Y)
 End Sub
 
@@ -130,10 +152,13 @@ End Sub
 
 Private Sub Class_Terminate()
     Set myControl = Nothing
+    Set f_Menu = Nothing
+    Set f_subMenu = Nothing
 End Sub
 
 Private Sub Initialize()
     hasControl = False
+    f_hasSubMenu = False
     isEnabled = True
     Set myControl = Nothing
 End Sub

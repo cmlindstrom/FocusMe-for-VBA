@@ -23,8 +23,9 @@ Private Const rootClass As String = "frm_Menu"
 Dim leftMouseDown As Boolean
 Dim rightMouseDown As Boolean
 
-Private Const BackgroundNormal As Long = &H8000000F
+Private Const BackgroundNormal As Long = &H8000000E
 Private Const BackgroundHighlight As Long = &H8000000D
+Private Const LineColor As Long = &H8000000A
 
 Public Enum enuControlType
     None = 0
@@ -38,7 +39,7 @@ Dim frmY As Integer
 
 ' - Events
 
-Public Event Click(ByVal tag As String)
+Public Event Click(ByVal Tag As String)
 
 ' - Properties
 
@@ -48,6 +49,7 @@ Dim f_miType As enuControlType
 
 Public Property Set Menu(ByVal cm As ContextMenu)
     Set f_cm = cm
+    Call BuildMenu
 End Property
 Public Property Get Menu() As ContextMenu
     Set Menu = f_cm
@@ -65,21 +67,21 @@ End Property
 
 ''' ContextMenu Events
 
-Private Sub f_cm_Click(ByVal tag As String)
-    MsgBox "Control clicked: " & tag
-    RaiseEvent Click(tag)
+Private Sub f_cm_Click(ByVal Tag As String)
+    MsgBox "Control clicked: " & Tag
+    RaiseEvent Click(Tag)
     Me.Hide
 End Sub
 
-Private Sub f_cm_DblClick(ByVal tag As String, ByVal Cancel As MSForms.ReturnBoolean)
+Private Sub f_cm_DblClick(ByVal Tag As String, ByVal Cancel As MSForms.ReturnBoolean)
     Dim c As control
-    Set c = FindControl(tag)
-    MsgBox "Control double clicked: " & tag
+    Set c = FindControl(Tag)
+    MsgBox "Control double clicked: " & Tag
 End Sub
 
-Private Sub f_cm_MouseMoved(ByVal tag As String, ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+Private Sub f_cm_MouseMoved(ByVal Tag As String, ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
     Dim c As control
-    Set c = FindControl(tag)
+    Set c = FindControl(Tag)
     Highlight c
 End Sub
 
@@ -104,19 +106,145 @@ End Sub
 
 Private Sub Initialize()
     f_miType = Labels
+    
+    ' BuildDefaultMenu
 End Sub
 
 ' - Methods
 
-
+''' Mostly for testing purposes
+Public Sub ShowDefaultMenu()
+    Call BuildDefaultMenu
+End Sub
 
 ' - Supporting Methods
 
 Private Sub BuildMenu()
 
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":BuildMenu"
+    
+    On Error GoTo ThrowException
+    
+    If f_cm Is Nothing Then
+        strTrace = "No ContextMenu specified."
+        GoTo ThrowException
+    End If
+    
+    Dim cmi As ContextMenuItem
+    Dim tmpCtrl As control
+    Dim strClassName As String
+    Dim strName As String
+    
+    Dim iRowHgt As Integer
+    iRowHgt = 16
+    Dim iNextY As Integer
+    iNextY = 0
+    
+    Dim i As Integer
+    i = 0
+    For Each cmi In f_cm.Items
+    
+        'Dim lbl As MSForms.label
+        'Set lbl = New MSForms.label
+        'lbl.BorderStyle = fmBorderStyleSingle
+        'lbl.BorderColor = LineColor
+        
+        Dim f As New MSForms.NewFont
+        f.SIZE = 10
+        
+        If f_miType = Labels Then
+            ' Add Label control
+            strClassName = "Forms.Label.1"
+            strName = "Label" & i
+            Set tmpCtrl = Me.Controls.Add(strClassName, strName)
+            With tmpCtrl
+                .Left = Me.img_Sidebar.Width
+                .Width = Me.Width - .Left
+                .Top = iNextY ' (X * 20) - 18 'You might have to adjust this spacing.  I just made it up.
+                .SpecialEffect = fmSpecialEffectFlat ' fmSpecialEffectEtched
+                .Height = iRowHgt
+                If cmi.itemType = Separator Then
+                    .Height = 1
+                    .BorderStyle = fmBorderStyleSingle
+                    .BorderColor = LineColor
+                End If
+                Set .font = f
+                
+                .Caption = cmi.Caption
+            End With
+        Else
+            ' Add Button control
+            strClassName = "Forms.CommandButton.1"
+            strName = "btn" & i
+            Set tmpCtrl = Me.Controls.Add(strClassName, strName)
+            With tmpCtrl
+                .Left = Me.img_Sidebar.Width
+                .Width = Me.Width - .Left
+                .Height = iRowHgt
+                .Top = iNextY ' (X * 20) - 18 'You might have to adjust this spacing.  I just made it up.
+                .Caption = cmi.Caption
+            End With
+        End If
+                      
+        ' Add to ContextMenuItem
+        cmi.SetControl tmpCtrl
+        cmi.UID = tmpCtrl.Name
+            
+        i = i + 1
+        iNextY = iNextY + tmpCtrl.Height + 2
+    Next
+    
+    ' Set the menu height
+    Me.Height = iNextY + 4
+    
+    ' Reset location if beyond bottom of the screen
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
 End Sub
 
 Private Sub BuildDefaultMenu()
+
+    Set f_cm = New ContextMenu
+    
+    Dim cmi As ContextMenuItem
+    
+    ' File
+    Set cmi = New ContextMenuItem
+    cmi.Caption = "File"
+    cmi.itemType = enuMenuItemType.label
+    cmi.Tag = "File"
+    f_cm.AddItem cmi
+    
+    ' Open
+    Set cmi = New ContextMenuItem
+    cmi.Caption = "Open"
+    cmi.itemType = enuMenuItemType.label
+    cmi.Tag = "Open"
+    f_cm.AddItem cmi
+    
+    ' Separator
+    Set cmi = New ContextMenuItem
+    cmi.itemType = enuMenuItemType.Separator
+    f_cm.AddItem cmi
+    
+    ' Properties
+    Set cmi = New ContextMenuItem
+    cmi.Caption = "Properties..."
+    cmi.itemType = enuMenuItemType.label
+    cmi.Tag = "Properties"
+    f_cm.AddItem cmi
+
+    Call BuildMenu
+    
+End Sub
+
+Private Sub BuildDefaultMenuOld()
 
     Set f_cm = New ContextMenu
     
@@ -136,8 +264,8 @@ Private Sub BuildDefaultMenu()
             strName = "Label" & i
             Set tmpCtrl = Me.Controls.Add(strClassName, strName)
             With tmpCtrl
-                .Left = 10
-                .Width = Me.Width ' - 20
+                .Left = Me.img_Sidebar.Width
+                .Width = Me.Width - .Left
                 .Height = 18
                 .Top = (i - 1) * 16 ' (X * 20) - 18 'You might have to adjust this spacing.  I just made it up.
                 .SpecialEffect = fmSpecialEffectFlat ' fmSpecialEffectEtched
@@ -149,7 +277,7 @@ Private Sub BuildDefaultMenu()
             strName = "btn" & i
             Set tmpCtrl = Me.Controls.Add(strClassName, strName)
             With tmpCtrl
-                .Left = 10
+                .Left = Me.img_Sidebar.Width
                 .Width = Me.Width - 20
                 .Height = 18
                 .Top = (i - 1) * 18 ' (X * 20) - 18 'You might have to adjust this spacing.  I just made it up.
@@ -158,9 +286,10 @@ Private Sub BuildDefaultMenu()
         
         End If
                
-        ' Add ContextMenuItem
+        ' Add to ContextMenuItem
         cmi.SetControl tmpCtrl
-        cmi.tag = strName
+        cmi.Tag = strName
+        cmi.UID = tmpCtrl.Name
         
         ' Add to ContextMenu
         f_cm.AddItem cmi

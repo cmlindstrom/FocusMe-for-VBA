@@ -31,6 +31,12 @@ Public Property Get Items() As ArrayList
     Set Items = mnuItems
 End Property
 
+''' Number of MenuItems in the collection
+Public Property Get Count() As Integer
+    Count = mnuItems.Count
+End Property
+
+
 ''' Track the form that contains the menu
 Public Property Set Form(ByVal f As UserForm)
     Set f_form = f

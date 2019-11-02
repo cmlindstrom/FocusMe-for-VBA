@@ -193,10 +193,10 @@ Public Function ShowMenu(ctl As MSForms.control, cMenu As ContextMenu, X As Sing
         strTrace = "Outside control limits - ignoring menu call."
         GoTo ThrowException
     End If
-    
-    
+        
     Dim frm As New frm_Menu
-    
+    frm.ShowDefaultMenu
+    frm.Show True
     
     
     ShowMenu = lSelection
