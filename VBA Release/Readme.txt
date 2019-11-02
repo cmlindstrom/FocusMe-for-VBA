@@ -2,7 +2,7 @@ FocusMe for Outlook - VBA Version
 
 Read this instructions first.
 
-1) Download the latest Release zip file (e.g. 20191017 Release.zip) - the latest will be the most recent date
+1) Download the latest Release zip file (e.g. 20191102/Release.zip) - the latest will be the most recent date
 	- Download the file to an easily accessible folder, e.g. your Desktop
 2) Open the Zip file (by double clicking on the file once it has been downloaded to your local PC) and read the Installation Instructions.pdf
 
