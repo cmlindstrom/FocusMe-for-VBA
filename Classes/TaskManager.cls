@@ -346,7 +346,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
             ' Dim myForm As UserForm
             ' Set myForm = GetUserForm(myListView)
             Dim id As Long
-            id = WinContextMenu.ShowPopup(myListView, cMenu, xSgl, ySgl)
+            id = ShowPopup(myListView, cMenu, xSgl, ySgl)
        
             strTrace = "Selected menu item: " & id
             LogMessage strTrace, strRoutine
@@ -956,9 +956,38 @@ Public Sub LinkMailToTask(ByVal m As Outlook.MailItem, ByVal t As Outlook.TaskIt
     Exit Sub
     
 ThrowException:
-    LogMessage strTrace, strRoutine
+    LogMessageEx strTrace, err, strRoutine
     
 End Sub
+
+''' Returns the text used to tag an email to a task
+Public Function GetTaskTag(ByVal t As Outlook.TaskItem) As String
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":LinkMailToTask"
+    
+    On Error GoTo ThrowException
+
+    strTrace = "Get Reference Id from the Task."
+    Dim refId As String
+    refId = ut.GetReferenceID(t)
+    If Len(refId) = 0 Then
+        ' Need to set a reference Id
+        ut.SetReferenceID t
+        refId = ut.GetReferenceID(t)
+    End If
+    
+    strTrace = ut.GetReferenceMessage(refId)
+    GetTaskTag = strTrace
+    
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    GetTaskTag = "No Tag Found, see error log."
+
+End Function
 
 ''' Displays the TaskItem's properties
 Public Sub TaskProperties(ByVal t As Outlook.TaskItem)
@@ -1175,6 +1204,8 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
 ' | Related Mail... (1004)
 ' | Forward...      (1016)
 ' +-----------------
+' | Copy Tag...     (1017)
+' +-----------------
 ' | Mark Incomplete (1005)
 ' | Mark Complete   (1006)
 ' | Due Today       (1007)
@@ -1243,6 +1274,22 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
     mni.Enabled = True
     mni.itemType = Button
     mni.UID = 1016
+    cm.AddItem mni
+    
+        ' Separator
+    Set mni = New ContextMenuItem
+    mni.Caption = "-"
+    mni.Enabled = True
+    mni.itemType = Separator
+    mni.UID = 10057
+    cm.AddItem mni
+    
+    ' Copy Tag
+    Set mni = New ContextMenuItem
+    mni.Caption = "Copy Tag..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1017
     cm.AddItem mni
     
     ' Separator
@@ -1390,6 +1437,9 @@ Public Sub ProcessContextMenuSelection(ByVal id As String, ByRef t As Outlook.Ta
             TaskProperties t
         Case 1016   ' Message Task
             MessageTask t
+        Case 1017   ' Copy Task Tag
+            strTrace = GetTaskTag(t)
+            CopyToClipboard strTrace
         Case Else
             strTrace = "Unrecognised menu code: " & id & " - ignoring request."
             LogMessage strTrace, strRoutine
