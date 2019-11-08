@@ -53,8 +53,8 @@ Public Enum enuDayOfWeek
 End Enum
 
 Public Type Point
-   x As Long
-   y As Long
+   X As Long
+   Y As Long
 End Type
 
 ''' Function returns True if obj is null or nothing
@@ -855,7 +855,8 @@ Public Sub LogMessageEx(ByVal trace As String, _
 
     Dim strTrace As String
     If Not err.Number = 0 Then
-        strTrace = err.Number & "|" & trace & " " & err.Description & " - DLL Error: " & err.LastDllError
+        strTrace = err.Number & "|" & trace & " " & err.Description & " - DLL Error: " & err.LastDllError & _
+                    "Source: " & err.Source
         If Not Len(err.Source) = 0 Then method = err.Source & ":" & method
     Else
         strTrace = trace

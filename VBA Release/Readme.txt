@@ -2,7 +2,11 @@ FocusMe for Outlook - VBA Version
 
 Read this instructions first.
 
+<<<<<<< HEAD
 1) Download the zip file package (e.g. fme-vba.zip) - the latest will be the most recent date
+=======
+1) Download the latest Release zip file (e.g. 20191102/Release.zip) - the latest will be the most recent date
+>>>>>>> origin/master
 	- Download the file to an easily accessible folder, e.g. your Desktop
 
 Source URLs:
@@ -18,6 +22,10 @@ Last Updated:
 
 For questions; please send email to support@ceptara.com
 
+<<<<<<< HEAD
 ReadMe - Share URL:
 https://ceptara001.blob.core.windows.net/fme-apps/iisdev/fme-vba/Readme.txt
 https://github.com/cmlindstrom/FocusMe-for-VBA/blob/master/VBA%20Release/Readme.txt
+=======
+For questions; please send email to support@ceptara.com
+>>>>>>> origin/master
