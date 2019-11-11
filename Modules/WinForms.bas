@@ -118,6 +118,11 @@ Public Enum FORM_PARENT_WINDOW_TYPE
     FORM_PARENT_WINDOW = 2
 End Enum
 
+Private Type POINTAPI
+    X As Long
+    Y As Long
+End Type
+
 Private Type MOUSEINPUT
     dx As Long
     dy As Long
@@ -162,6 +167,9 @@ Private Type RECT
    Right As Long
    Bottom As Long
 End Type
+
+'''  Get mouse cursor position inside or outside a form anywhere on the screen.
+Private Declare PtrSafe Function GetCursorPos Lib "user32" (lpPoint As POINTAPI) As Long
 
 Private Declare PtrSafe Function SetParent Lib "user32" ( _
     ByVal hWndChild As Long, _
@@ -525,6 +533,31 @@ End If
 
 End Function
 
+''' Get Absolute coordinates of the Mouse - also in WinContextMenu module
+Public Sub GetCursorPositionA(ByRef mX As Long, ByRef mY As Long)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetCursorPosition"
+    
+    On Error GoTo ThrowException
+    
+    Dim a As POINTAPI
+    
+    Dim lReturn As Long
+    lReturn = GetCursorPos(a)
+    
+    mX = a.X
+    mY = a.Y
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    mX = -1
+
+End Sub
+
 ''' Returns the Absolute position of the specified UserForm
 Public Sub GetFormPosition(UF As UserForm, _
                             ByRef X As Long, ByRef Y As Long)
@@ -590,9 +623,12 @@ Public Function SetWindowPosition(ByVal hwnd As Long, ByVal X As Long, ByVal Y A
     w = lr.Right - lr.Left
     h = lr.Bottom - lr.Top
     
+    Dim b As Long
+    b = 1
+    
     ' Move the window to the new origin coordinates
     Dim bWorked As Long
-    bWorked = MoveWindow(hwnd, X, Y, w, h, 1)
+    bWorked = MoveWindow(hwnd, X, Y, w, h, b)
     If Not bWorked Then
         strTrace = "Failed to move the window to (" & X & "," & Y & ") w=" & w & " h=" & h
         GoTo ThrowException

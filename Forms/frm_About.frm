@@ -19,6 +19,16 @@ Private Const rootClass As String = "frm_About"
 
 ' Event Handlers
 
+
+Private Sub UserForm_Activate()
+    ' Fires every time the Window gets user focus
+    ' SetFormPosition Me, 100, 100
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+    ' Closing
+End Sub
+
 Private Sub btn_OK_Click()
     Unload Me
 End Sub
@@ -33,6 +43,10 @@ Private Sub UserForm_Initialize()
     
     Me.txtbx_Description.text = GetDescription
 
+End Sub
+
+Private Sub UserForm_Terminate()
+    ' Clean Up
 End Sub
 
 ' Methods
@@ -56,10 +70,5 @@ Private Function GetDescription() As String
 
 End Function
 
-Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
-    ' Closing
-End Sub
 
-Private Sub UserForm_Terminate()
-    ' Clean Up
-End Sub
+

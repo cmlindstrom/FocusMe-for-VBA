@@ -178,7 +178,8 @@ End Function
 
 ''' Shows a FME ContextMenu Form
 ''' Returns the selected menu item code
-Public Function ShowMenu(ctl As MSForms.control, cMenu As ContextMenu, X As Single, Y As Single) As Long
+Public Function ShowMenu(cMenu As ContextMenu, _
+                Optional X As Long = -1, Optional Y As Long = -1) As Long
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -187,17 +188,41 @@ Public Function ShowMenu(ctl As MSForms.control, cMenu As ContextMenu, X As Sing
     On Error GoTo ThrowException
     
     Dim lSelection As Long
-    
-    ' If click is outside the calling control, do nothing
-    If X > ctl.Width Or Y > ctl.Height Or X < 0 Or Y < 0 Then
-        strTrace = "Outside control limits - ignoring menu call."
-        GoTo ThrowException
-    End If
-        
+           
     Dim frm As New frm_Menu
-    frm.ShowDefaultMenu
-    frm.Show True
+    Set frm.Menu = cMenu
+    ' frm.ShowDefaultMenu
     
+    ' Prepare the position
+    Dim iX As Integer
+    Dim iY As Integer
+    GetCursorPosition iX, iY
+    
+    Dim mX As Long
+    Dim mY As Long
+    
+    ' Position the menu
+    If X = -1 Then
+        ' Place it at the cursor position
+        mX = iX
+        mY = iY
+    Else
+        ' Place it at the requested position
+        mX = X
+        mY = Y
+    End If
+    
+    frm.SetPosition mX, mY
+    
+    strTrace = "Showing the menu at X: " & mX & ", Y: " & mY
+    LogMessage strTrace, strRoutine
+    
+    ' Show the Menu
+    frm.Show
+    
+    If Not frm.MenuItem Is Nothing Then
+        lSelection = CLng(frm.MenuItem.UID)
+    End If
     
     ShowMenu = lSelection
     Exit Function

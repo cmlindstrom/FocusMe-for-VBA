@@ -53,8 +53,8 @@ Public Enum enuDayOfWeek
 End Enum
 
 Public Type Point
-   X As Long
-   Y As Long
+   x As Long
+   y As Long
 End Type
 
 ''' Function returns True if obj is null or nothing
@@ -225,6 +225,64 @@ Public Function RandomGuid(ByVal iLength As Integer) As String
     
     RandomGuid = strReturn
     
+
+End Function
+
+''' Pads the input string with specified character on the left of the input string
+''' args: strIn = Input String, count = number of characters to pad (defaults to 1),
+''' alpha = the character used to pad (defaults to a space)
+Public Function PadLeft(ByVal strIn As String, _
+            Optional ByVal count As Integer = 1, _
+            Optional ByVal alpha As String = " ") As String
+    
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":PadLeft"
+    
+    Dim strReturn As String
+    Dim strPad As String
+    
+    Dim i As Integer
+    For i = 1 To count
+        strPad = alpha & strPad
+    Next
+    
+    strReturn = strPad & strIn
+    PadLeft = strReturn
+    
+    Exit Function
+    
+ThrowException:
+    PadLeft = ""
+    
+End Function
+
+''' Pads the input string with the specied character on the right of the input string
+''' args: strIn = Input String, count = number of characters to pad (defaults to 1),
+''' alpha = the character used to pad (defaults to a space)
+Public Function PadRight(ByVal strIn As String, _
+            Optional ByVal count As Integer = 1, _
+            Optional ByVal alpha As String = " ") As String
+            
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":PadRight"
+    
+    Dim strReturn As String
+    Dim strPad As String
+    
+    Dim i As Integer
+    For i = 1 To count
+        strPad = strPad & alpha
+    Next
+            
+    strReturn = strIn & strPad
+    PadRight = strReturn
+    
+    Exit Function
+    
+ThrowException:
+    PadRight = ""
 
 End Function
 

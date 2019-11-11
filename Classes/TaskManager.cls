@@ -292,7 +292,7 @@ Private Sub myListView_ItemClick(ByVal Item As MSComctlLib.ListItem)
     
 End Sub
 
-Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal Y As stdole.OLE_YPOS_PIXELS)
+Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
 
     Dim strTrace As String
     strTrace = ""
@@ -310,7 +310,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
        
         ' Get the pointed to listview item
         Dim li As ListItem
-        Set li = LV_GetItemAt(X, Y)
+        Set li = LV_GetItemAt(x, y)
         If Not IsNothing(li) Then
         
             ' Select Item if not already selected
@@ -338,15 +338,20 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
         
             strTrace = "Prepare context menu location."
             Dim xSgl As Single
-            xSgl = X
+            xSgl = x
             Dim ySgl As Single
-            ySgl = Y
+            ySgl = y
             
             strTrace = "Present context menu."
             ' Dim myForm As UserForm
             ' Set myForm = GetUserForm(myListView)
             Dim id As Long
-            id = ShowPopup(myListView, cMenu, xSgl, ySgl)
+            ' id = ShowPopup(myListView, cMenu, xSgl, ySgl)
+            
+            ' Positions the contextMenu at the absolute mouse cursor
+            Dim cMenu2 As ContextMenu
+            Set cMenu2 = GetContextMenuTwoTier(t)
+            id = ShowMenu(cMenu2)
        
             strTrace = "Selected menu item: " & id
             LogMessage strTrace, strRoutine
@@ -354,7 +359,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
             Call ProcessContextMenuSelection(id, t)
         
         Else
-            strTrace = "WARNING: failed to find a ListItem at the loc: (" & X & "," & Y & ")."
+            strTrace = "WARNING: failed to find a ListItem at the loc: (" & x & "," & y & ")."
             LogMessage strTrace, strRoutine
         End If
               
@@ -374,7 +379,7 @@ Private Sub myListView_OLECompleteDrag(Effect As Long)
     ' Effect = 5
 End Sub
 
-Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, x As Single, y As Single)
     
     Dim strTrace As String
     Dim strRoutine As String
@@ -398,7 +403,7 @@ Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Lon
     Dim t As Outlook.TaskItem
     Set t = Nothing
     Dim li As ListItem
-    Set li = LV_GetItemAt(X, Y, 20)
+    Set li = LV_GetItemAt(x, y, 20)
     If Not IsNothing(li) Then
         ' Get selected Task
         Dim eid As String
@@ -442,7 +447,7 @@ Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Lon
         
     ' FILES - Array of Names from WinExplorer
     If Data.GetFormat(15) Then
-        strTrace = "File collection dropped, file count: " & Data.Files.Count
+        strTrace = "File collection dropped, file count: " & Data.Files.count
         LogMessage strTrace, strRoutine
     End If
     
@@ -453,13 +458,13 @@ ThrowException:
       
 End Sub
 
-Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, x As Single, y As Single, State As Integer)
     
     If f_SuspendUI Then Exit Sub
     
     On Error Resume Next
     Effect = 1
-    Set myListView.DropHighlight = lv_Tasks.HitTest(X * 15, Y * 20)
+    Set myListView.DropHighlight = lv_Tasks.HitTest(x * 15, y * 20)
 End Sub
 
 ' - Constructor
@@ -1061,7 +1066,7 @@ Public Sub ProcessDroppedText(ByVal strMsg As String, ByVal t As Outlook.TaskIte
     Select Case typ
         Case 1 ' One or more MailItems dropped
             Set dt = importer.Import(strMsg, 1, strHeader, vbTab)
-            strTrace = "Mail: " & dt.Name & " found " & dt.rows.Count & " items."
+            strTrace = "Mail: " & dt.Name & " found " & dt.rows.count & " items."
             ' Find Mail Item
             Dim Mail As ArrayList
             Set Mail = GatherDroppedMail(dt)
@@ -1069,7 +1074,7 @@ Public Sub ProcessDroppedText(ByVal strMsg As String, ByVal t As Outlook.TaskIte
                 strTrace = "Outlook mail query failed."
                 GoTo ThrowException
             End If
-            If Mail.Count > 0 Then
+            If Mail.count > 0 Then
                 Dim m As Outlook.MailItem
                 For Each m In Mail
                     ' Link MailItem to TaskItem
@@ -1077,17 +1082,17 @@ Public Sub ProcessDroppedText(ByVal strMsg As String, ByVal t As Outlook.TaskIte
                 Next
             Else
                 strTrace = "Failed to find mail matching the dropped " & _
-                            dt.rows.Count & " mailItems."
+                            dt.rows.count & " mailItems."
                 GoTo ThrowException
             End If
             
         Case 2 ' One or more ContactItems dropped
             Set dt = importer.Import(strMsg, 1, "Full Name", vbTab)
-            strTrace = "Contacts: " & dt.Name & " found " & dt.rows.Count & " items."
+            strTrace = "Contacts: " & dt.Name & " found " & dt.rows.count & " items."
 
         Case 4 ' One or more Tasks dropped
             Set dt = importer.Import(strMsg, 1, "Task Subject", vbTab)
-            strTrace = "Tasks: " & dt.Name & " found " & dt.rows.Count & " items."
+            strTrace = "Tasks: " & dt.Name & " found " & dt.rows.count & " items."
             
         Case Else
             strTrace = "Unrecognized dropped text: " & strMsg
@@ -1116,9 +1121,9 @@ Private Function GatherDroppedMail(ByVal dt As DataTable) As ArrayList
         Dim subj As String
         subj = r.GetItem("Subject")
         Set tmpList = FindMailBySubject(subj)
-        If tmpList.Count > 0 Then
-            If tmpList.Count > 10 Then
-                strTrace = "WARNING: Seems like a lot of mail to mark, items: " & tmpList.Count
+        If tmpList.count > 0 Then
+            If tmpList.count > 10 Then
+                strTrace = "WARNING: Seems like a lot of mail to mark, items: " & tmpList.count
                 LogMessage strTrace, strRoutine
             End If
         Else
@@ -1394,6 +1399,230 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
 
 End Function
 
+''' Returns a collection of ContextMenuItems
+Public Function GetContextMenuTwoTier(ByVal t As Outlook.TaskItem) As ContextMenu
+
+' +-----------------
+' | Open            (1001) <- Starts the Outlook Task Inspector
+' | Print...        (1002)
+' +-----------------
+' | Delegate...     (1003)
+' | Related Mail... (1004)
+' | Forward...      (1016)
+' +-----------------
+' | Copy Tag...     (1017)
+' +-----------------
+' | Mark Incomplete (1005)
+' | Mark Complete   (1006)
+' | Due Today       (1007)
+' | Reschedule    >>(1018)  +-----------------
+'                           | Tomorrow        (1008)
+'                           | 3 Days          (1009)
+'                           | Next Week       (1010)
+'                           | Next Month      (1011)
+'                           | Master Task     (1012)
+'                           +-----------------
+' +-----------------
+' | Delete          (1014)
+' | Properties      (1015)
+' +-----------------
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetContextMenuTwoTier"
+    
+    On Error GoTo ThrowException
+    
+    Dim cm As ContextMenu
+    Set cm = New ContextMenu
+
+    Dim mni As ContextMenuItem
+    
+    ' Open Task
+    Set mni = New ContextMenuItem
+    mni.Caption = "Open..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1001
+    cm.AddItem mni
+    
+    ' Print Task
+    Set mni = New ContextMenuItem
+    mni.Caption = "Print..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1002
+    cm.AddItem mni
+    
+    ' Separator
+    Set mni = New ContextMenuItem
+    mni.Caption = "-"
+    mni.Enabled = True
+    mni.itemType = Separator
+    mni.UID = 10022
+    cm.AddItem mni
+        
+    ' Delegate
+    Set mni = New ContextMenuItem
+    mni.Caption = "Delegate..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1003
+    cm.AddItem mni
+
+    ' Related Mail
+    Set mni = New ContextMenuItem
+    mni.Caption = "Related Mail..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1004
+    cm.AddItem mni
+    
+    ' Message Task
+    Set mni = New ContextMenuItem
+    mni.Caption = "Forward..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1016
+    cm.AddItem mni
+    
+        ' Separator
+    Set mni = New ContextMenuItem
+    mni.Caption = "-"
+    mni.Enabled = True
+    mni.itemType = Separator
+    mni.UID = 10057
+    cm.AddItem mni
+    
+    ' Copy Tag
+    Set mni = New ContextMenuItem
+    mni.Caption = "Copy Tag..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1017
+    cm.AddItem mni
+    
+    ' Separator
+    Set mni = New ContextMenuItem
+    mni.Caption = "-"
+    mni.Enabled = True
+    mni.itemType = Separator
+    mni.UID = 10055
+    cm.AddItem mni
+    
+    If t.Complete Then
+        ' Mark Incomplete
+        Set mni = New ContextMenuItem
+        mni.Caption = "Mark Incomplete"
+        mni.Enabled = True
+        mni.itemType = Button
+        mni.UID = 1005
+        cm.AddItem mni
+    Else
+        ' Mark Complete
+        Set mni = New ContextMenuItem
+        mni.Caption = "Mark Complete"
+        mni.Enabled = True
+        mni.itemType = Button
+        mni.UID = 1006
+        cm.AddItem mni
+    End If
+    
+    ' Due Today
+    Set mni = New ContextMenuItem
+    mni.Caption = "Due Today"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1007
+    cm.AddItem mni
+    
+    ' - - Reschedule Menu
+    Dim cmSub As ContextMenu
+    Set cmSub = New ContextMenu
+    
+    ' Tomorrow
+    Set mni = New ContextMenuItem
+    mni.Caption = "Tomorrow"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1008
+    cmSub.AddItem mni
+    
+    ' 3 Days
+    Set mni = New ContextMenuItem
+    mni.Caption = "Move 3 Days"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1009
+    cmSub.AddItem mni
+    
+    ' Next Week
+    Set mni = New ContextMenuItem
+    mni.Caption = "Next Week"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1010
+    cmSub.AddItem mni
+    
+    ' Next Month
+    Set mni = New ContextMenuItem
+    mni.Caption = "Next Month"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1011
+    cmSub.AddItem mni
+    
+    ' Master Task
+    Set mni = New ContextMenuItem
+    mni.Caption = "Master Task"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1012
+    cmSub.AddItem mni
+    
+    ' Reschedule
+    Set mni = New ContextMenuItem
+    mni.Caption = "Reschedule"
+    mni.Enabled = True
+    mni.itemType = Menu
+    mni.UID = 1018
+    Set mni.SubMenu = cmSub
+    cm.AddItem mni
+    
+    ' Separator
+    Set mni = New ContextMenuItem
+    mni.Caption = "-"
+    mni.Enabled = True
+    mni.itemType = Separator
+    mni.UID = 1013
+    cm.AddItem mni
+    
+    ' Delete
+    Set mni = New ContextMenuItem
+    mni.Caption = "Delete"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1014
+    cm.AddItem mni
+    
+    ' Properties
+    Set mni = New ContextMenuItem
+    mni.Caption = "Properties..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1015
+    cm.AddItem mni
+    
+    Set GetContextMenuTwoTier = cm
+    
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetContextMenuTwoTier = Nothing
+
+End Function
+
 Public Sub ProcessContextMenuSelection(ByVal id As String, ByRef t As Outlook.TaskItem)
 
     Dim strTrace As String
@@ -1440,6 +1669,9 @@ Public Sub ProcessContextMenuSelection(ByVal id As String, ByRef t As Outlook.Ta
         Case 1017   ' Copy Task Tag
             strTrace = GetTaskTag(t)
             CopyToClipboard strTrace
+        Case 1018   ' Present Reschedule Menu
+            ' Handled in the ContextMenu form
+            ' Ignore it here
         Case Else
             strTrace = "Unrecognised menu code: " & id & " - ignoring request."
             LogMessage strTrace, strRoutine
@@ -1490,7 +1722,7 @@ Private Function IsItemInCollection(ByVal t As Outlook.TaskItem) As Integer
 
     Dim bFnd As Boolean
     bFnd = False
-    For i = 0 To myItems.Items.Count - 1
+    For i = 0 To myItems.Items.count - 1
         Dim tmp As Outlook.TaskItem
         Set tmp = myItems.Items(i)
         If tmp.EntryId = t.EntryId Then
@@ -1573,7 +1805,7 @@ Private Function GetOutlookTasksFromFolders(ByVal DASLQuery As String, _
         strTrace = "A source list of task folders is required."
         GoTo ThrowException
     End If
-    If Folders.Count = 0 Then
+    If Folders.count = 0 Then
         strTrace = "Source folder list was empty - no folders to process."
         GoTo ThrowException
     End If
@@ -1609,7 +1841,7 @@ Private Function GetOutlookTasksFromFolders(ByVal DASLQuery As String, _
                 Set t = o
                 
                 ' Load questions
-                If t.Recipients.Count > 0 Then
+                If t.Recipients.count > 0 Then
                     strTrace = "Found a shared task."
                     If Not oMe Is Nothing Then
                     
@@ -1708,7 +1940,7 @@ Private Sub AddListViewItem(ByVal t As Outlook.TaskItem, Optional ByVal idx As I
     End If
 
     ' Check the index
-    If idx < 0 Then idx = myListView.ListItems.Count + 1
+    If idx < 0 Then idx = myListView.ListItems.count + 1
 
     ' Add Item to ListView
     Dim ky As String
@@ -1820,7 +2052,7 @@ Private Function FindListViewItem(ByVal t As Outlook.TaskItem) As ListItem
     Dim retItem As ListItem
     Set retItem = Nothing
     
-    For i = 1 To myListView.ListItems.Count
+    For i = 1 To myListView.ListItems.count
         Dim li As ListItem
         Set li = myListView.ListItems(i)
         If li.key = t.EntryId Then
@@ -1854,7 +2086,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     myListView.ColumnHeaders.Clear
     
     ' Setup ListView Columns and Configuration
-    If myListView.ColumnHeaders.Count = 0 Then
+    If myListView.ColumnHeaders.count = 0 Then
         'Initialize the View
         Dim ch1 As ColumnHeader
         Dim ch2 As ColumnHeader
@@ -1873,7 +2105,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     myListView.ListItems.Clear
     
     ' Add current class collection
-    If myItems.Count > 0 Then
+    If myItems.count > 0 Then
     
         ' Sort the internal list
         Dim strSort As String
@@ -1884,7 +2116,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
         collSort.Sort strSort, myItems.Items, sortingDirection
           
         ' Load the ListView
-        For i = 0 To myItems.Count - 1
+        For i = 0 To myItems.count - 1
             Dim t As Outlook.TaskItem
             Set t = myItems.Item(i)
                                  
@@ -1897,7 +2129,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
         
     End If
     
-    strTrace = "Items: " & myItems.Count & " tasks..."
+    strTrace = "Items: " & myItems.count & " tasks..."
     
 ThrowException:
     LogMessage strTrace, strRoutine
@@ -1946,7 +2178,7 @@ Private Sub ResizeLVColumns()
     ' if scrollbar present, make space
     Dim bScrollbar As Boolean
     With myListView
-        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.Count > .Height
+        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.count > .Height
     End With
     
     If bScrollbar Then totWidth = totWidth - 15
@@ -1967,8 +2199,8 @@ ThrowException:
     
 End Sub
 
-Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
-                              ByVal Y As stdole.OLE_YPOS_PIXELS, _
+Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
+                              ByVal y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
 
@@ -1977,12 +2209,12 @@ Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
     ' - "on most computers 1 pixel = 15 TWIPS"
     '    https://stackoverflow.com/questions/36442535/vba-drag-drop-from-treeview-to-listview-listview-to-treeview-activex-controls
     Dim xInt As Single
-    xInt = X
+    xInt = x
     Dim yInt As Single
-    yInt = Y
+    yInt = y
            
     Dim li As ListItem
-    Set li = myListView.HitTest(X * factor, Y * factor)
+    Set li = myListView.HitTest(x * factor, y * factor)
         
     Set LV_GetItemAt = li
         
