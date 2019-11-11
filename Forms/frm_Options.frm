@@ -231,6 +231,7 @@ Private Sub GetUI()
     chkbx_Delegate.value = stgs.MoveOnDelegate
     chkbx_FileInDrawer.value = stgs.MoveOnFileInDrawer
     chkbx_OnReply.value = stgs.MoveOnReply
+    chkbx_WindowsCM.value = stgs.UseContextMenuWindows
     
     ' Location
     lbl_DestinationFolderPath.Caption = stgs.DestinationFolder
@@ -246,6 +247,7 @@ Private Sub SaveSettings()
         ' General
         stgs.ShowOnStartup = chkbx_ShowTaskPaneOnStartup.value
         stgs.EnableAppEvents = chkbx_EnableApp.value
+        stgs.UseContextMenuWindows = chkbx_WindowsCM.value
         
         ' Events
         If rb_DoNotMoveMail.value Then

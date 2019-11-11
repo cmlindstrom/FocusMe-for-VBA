@@ -128,6 +128,17 @@ Public Property Get IgnoreSentMailMove() As Boolean
     IgnoreSentMailMove = defSetting.value
 End Property
 
+''' Gets/Sets a flag to include or exclude a Task as an attachment
+''' when forwarding a task in email
+Public Property Let AttachTaskToEmail(ByVal bl As Boolean)
+   SetSetting "AttachTaskToEmail", bl
+End Property
+Public Property Get AttachTaskToEmail() As Boolean
+    Set defSetting = GetSetting("AttachTaskToEmail")
+    If IsNothing(defSetting) Then Set defSetting = Create("AttachTaskToEmail", False)
+    AttachTaskToEmail = defSetting.value
+End Property
+
 ''' Gets/Sets a flag to start the Task Window when Outlook starts up
 Public Property Let ShowOnStartup(ByVal bl As Boolean)
     SetSetting "ShowTaskWindowOnStartUp", bl
@@ -168,9 +179,19 @@ Public Property Get TimecardInclude24hEvents() As Boolean
     TimecardInclude24hEvents = defSetting.value
 End Property
 
+''' Gets/Sets Use Windows Context Menu vs internal ContextMenu Window
+Public Property Let UseContextMenuWindows(ByVal b As Boolean)
+    SetSetting "UseContextMenuWindows", b
+End Property
+Public Property Get UseContextMenuWindows() As Boolean
+    Set defSetting = GetSetting("UseContextMenuWindows")
+    If defSetting Is Nothing Then Set defSetting = Create("UseContextMenuWindows", True)
+    UseContextMenuWindows = defSetting.value
+End Property
+
 ''' Gets/Sets starting location of the FME Task Pane
 Public Property Set TaskPaneLocation(ByVal pt As Point)
-    SetSetting "TaskPaneLocation", pt.x & ";" & pt.y
+    SetSetting "TaskPaneLocation", pt.X & ";" & pt.y
 End Property
 Public Property Get TaskPaneLocation() As Point
     Set defSetting = GetSetting("TaskPaneLocation")
@@ -181,7 +202,7 @@ Public Property Get TaskPaneLocation() As Point
     vars = Split(defSetting.value, ";")
     
     Dim pt As New Point
-    pt.x = CLng(vars(LBound(vars)))
+    pt.X = CLng(vars(LBound(vars)))
     pt.y = CLng(vars(UBound(vars)))
     Set TaskPaneLocation = pt
     
@@ -211,7 +232,7 @@ End Function
 Public Function Create(ByVal nme As String, ByVal val As Variant) As Setting
     ' Create the new Setting
     Dim s As New Setting
-    s.name = nme
+    s.Name = nme
     s.value = val
     s.ValueType = GetSettingType(val)
     ' Add it to the collection
@@ -262,7 +283,7 @@ Public Function GetSetting(ByVal nme As String) As Setting
     
     Dim s As Setting
     For Each s In innerList
-        If InStr(1, LCase(s.name), LCase(nme)) > 0 Then
+        If InStr(1, LCase(s.Name), LCase(nme)) > 0 Then
             Set retSetting = s
             Exit For
         End If
@@ -382,7 +403,7 @@ Private Sub LoadSettings()
                 settingType = nd.ChildNodes(2).nodeTypedValue
                 
                 Set s = New Setting
-                s.name = settingName
+                s.Name = settingName
                 s.value = GetSettingValue(settingValue, settingType)
                 s.ValueType = settingType
                 
@@ -432,13 +453,13 @@ Private Sub SaveSettings()
     Set rootNode = dom.createElement("Settings")
     dom.appendChild rootNode
     
-    If innerList.Count > 0 Then
+    If innerList.count > 0 Then
         Dim s As Setting
         For Each s In innerList
             Set node = dom.createElement("Setting")
             
             Set rwNode = dom.createElement("Name")
-            rwNode.text = s.name
+            rwNode.text = s.Name
             node.appendChild rwNode
             
             Set rwNode = dom.createElement("Value")
