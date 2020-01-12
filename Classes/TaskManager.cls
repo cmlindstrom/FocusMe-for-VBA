@@ -1213,11 +1213,13 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
 
 ' +-----------------
 ' | Open            (1001) <- Starts the Outlook Task Inspector
+' | Open Project    (1019)
 ' | Print...        (1002)
 ' +-----------------
 ' | Delegate...     (1003)
 ' | Related Mail... (1004)
 ' | Forward...      (1016)
+' | Schedule Time...(1024)
 ' +-----------------
 ' | Copy Tag...     (1017)
 ' +-----------------
@@ -1249,6 +1251,14 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
     mni.Enabled = True
     mni.itemType = Button
     mni.UID = 1001
+    cm.AddItem mni
+    
+    ' Open Project
+    Set mni = New ContextMenuItem
+    mni.Caption = "Open Project..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1019
     cm.AddItem mni
     
     ' Print Task
@@ -1289,6 +1299,14 @@ Public Function GetContextMenu(ByVal t As Outlook.TaskItem) As ContextMenu
     mni.Enabled = True
     mni.itemType = Button
     mni.UID = 1016
+    cm.AddItem mni
+    
+    ' Schedule Time - Appointment
+    Set mni = New ContextMenuItem
+    mni.Caption = "Schedule Time..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1024
     cm.AddItem mni
     
         ' Separator
@@ -1414,14 +1432,22 @@ Public Function GetContextMenuTwoTier(ByVal t As Outlook.TaskItem) As ContextMen
 
 ' +-----------------
 ' | Open            (1001) <- Starts the Outlook Task Inspector
+' | Open Project  >>(1019)  +-----------------
+'                           | Open Project      (1020)
+'                           | Windows Folder    (1021)
+'                           | Outlook Folder    (1022)
+'                           | OneNote Location  (1023)
+'                           +------------------
 ' | Print...        (1002)
 ' +-----------------
 ' | Delegate...     (1003)
 ' | Related Mail... (1004)
 ' | Forward...      (1016)
+' | Schedule Time...(1024)
 ' +-----------------
 ' | Copy Tag...     (1017)
 ' +-----------------
+' | Start Task...   (1025)
 ' | Mark Incomplete (1005)
 ' | Mark Complete   (1006)
 ' | Due Today       (1007)
@@ -1494,6 +1520,14 @@ Public Function GetContextMenuTwoTier(ByVal t As Outlook.TaskItem) As ContextMen
     mni.Enabled = True
     mni.itemType = Button
     mni.UID = 1016
+    cm.AddItem mni
+    
+    ' Schedule Time - Appointment
+    Set mni = New ContextMenuItem
+    mni.Caption = "Schedule Time..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1024
     cm.AddItem mni
     
         ' Separator
