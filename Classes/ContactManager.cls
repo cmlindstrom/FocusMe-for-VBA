@@ -66,7 +66,7 @@ End Property
 ''' Number of items that are checked
 Public Property Get ItemsChecked() As Integer
     Dim i As Integer
-    i = selItems.Count
+    i = selItems.count
     ItemsChecked = i
 End Property
 
@@ -372,7 +372,7 @@ Public Sub RemoveContactProject(ByVal p As fmeProject, _
         Exit Sub
     End If
 
-    If c Is Nothing Then c = selItem
+    If c Is Nothing Then Set c = selItem
 
     ' Get the list of projects
     Dim pm As New ProjectManager
@@ -430,7 +430,7 @@ Public Sub NewEmail(Optional p As fmeProject = Nothing, _
     strTrace = "Get the contact's email address(es)"
     Dim eList As ArrayList
     Set eList = GetEmailAddresses(c)
-    If eList.Count = 0 Then
+    If eList.count = 0 Then
         strTrace = "No email addresses found."
         GoTo ThrowException
     End If
@@ -475,11 +475,11 @@ Public Sub NewGroupEmail(Optional ByVal p As fmeProject = Nothing, _
     
     On Error GoTo ThrowException
     
-    If selItems.Count = 0 Then
+    If selItems.count = 0 Then
         strTrace = "No contacts were selected."
         GoTo ThrowException
     End If
-    If selItems.Count = 1 Then
+    If selItems.count = 1 Then
         Call NewEmail(p, selItems.Items(0), useBCC)
         Exit Sub
     End If
@@ -502,7 +502,7 @@ Public Sub NewGroupEmail(Optional ByVal p As fmeProject = Nothing, _
     For Each tc In selItems.Items
         strTrace = "Get the contact's email address(es)"
         Set eList = GetEmailAddresses(tc)
-        If eList.Count > 0 Then
+        If eList.count > 0 Then
             For Each s In eList
                 aList.Add s
             Next
@@ -561,7 +561,7 @@ Public Sub ScheduleMeeting(Optional p As fmeProject = Nothing, _
     strTrace = "Get the contact's email address(es)"
     Dim eList As ArrayList
     Set eList = GetEmailAddresses(c)
-    If eList.Count = 0 Then
+    If eList.count = 0 Then
         strTrace = "No email addresses found."
         GoTo ThrowException
     End If
@@ -607,11 +607,11 @@ Public Sub ScheduleGroupMeeting(Optional ByVal p As fmeProject = Nothing)
     
     On Error GoTo ThrowException
     
-    If selItems.Count = 0 Then
+    If selItems.count = 0 Then
         strTrace = "No contacts were selected."
         GoTo ThrowException
     End If
-    If selItems.Count = 1 Then
+    If selItems.count = 1 Then
         Call ScheduleMeeting(p, selItems(0))
         Exit Sub
     End If
@@ -626,7 +626,7 @@ Public Sub ScheduleGroupMeeting(Optional ByVal p As fmeProject = Nothing)
     For Each tc In selItems.Items
         strTrace = "Get the contact's email address(es)"
         Set eList = GetEmailAddresses(tc)
-        If eList.Count > 0 Then
+        If eList.count > 0 Then
             For Each s In eList
                 aList.Add s
             Next
@@ -713,7 +713,7 @@ Public Function GetEmailAddresses(Optional ByVal c As Outlook.ContactItem) As Ar
     
     ' Deduplicate if needed
     Dim bFnd As Boolean
-    If tmpList.Count > 1 Then
+    If tmpList.count > 1 Then
         For Each s In tmpList
             bFnd = False
             For Each ts In retList
@@ -788,7 +788,7 @@ Private Function IsItemInCollection(ByVal c As Outlook.ContactItem) As Integer
     Dim i As Integer
     Dim bFnd As Boolean
     bFnd = False
-    For i = 0 To myItems.Items.Count - 1
+    For i = 0 To myItems.Items.count - 1
         Dim tmp As Outlook.ContactItem
         Set tmp = myItems.Items(i)
         If tmp.EntryId = c.EntryId Then
@@ -871,7 +871,7 @@ Private Function GetOutlookContactsFromFolders(ByVal DASLQuery As String, _
         strTrace = "A source list of contact folders is required."
         GoTo ThrowException
     End If
-    If Folders.Count = 0 Then
+    If Folders.count = 0 Then
         strTrace = "Source folder list was empty - no folders to process."
         GoTo ThrowException
     End If
@@ -980,7 +980,7 @@ Private Sub AddListViewItem(ByVal c As Outlook.ContactItem, Optional ByVal idx A
     On Error GoTo ThrowException
 
     ' Check the index
-    If idx < 0 Then idx = myListView.ListItems.Count + 1
+    If idx < 0 Then idx = myListView.ListItems.count + 1
 
     ' Add Item to ListView
     Dim ky As String
@@ -1122,7 +1122,7 @@ Private Function FindListViewItem(ByVal c As Outlook.ContactItem) As ListItem
     Set retItem = Nothing
     
     Dim i As Integer
-    For i = 1 To myListView.ListItems.Count
+    For i = 1 To myListView.ListItems.count
         Dim li As ListItem
         Set li = myListView.ListItems(i)
         If li.key = c.EntryId Then
@@ -1160,7 +1160,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     Set selItem = Nothing
     
     ' Setup ListView Columns and Configuration
-    If myListView.ColumnHeaders.Count = 0 Then
+    If myListView.ColumnHeaders.count = 0 Then
         'Initialize the View
         Dim ch1 As ColumnHeader
         Dim ch2 As ColumnHeader
@@ -1179,7 +1179,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     myListView.ListItems.Clear
     
     ' Add current class collection
-    If myItems.Count > 0 Then
+    If myItems.count > 0 Then
     
         ' Sort the internal list
         Dim strSort As String
@@ -1191,7 +1191,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
           
         ' Load the ListView
         Dim i As Integer
-        For i = 0 To myItems.Count - 1
+        For i = 0 To myItems.count - 1
             Dim c As Outlook.ContactItem
             Set c = myItems.Item(i)
                                  
@@ -1204,7 +1204,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
         
     End If
     
-    strTrace = "Items: " & myItems.Count & " contacts..."
+    strTrace = "Items: " & myItems.count & " contacts..."
     Exit Sub
     
 ThrowException:
@@ -1255,7 +1255,7 @@ Private Sub ResizeLVColumns()
     ' if scrollbar present, make space
     Dim bScrollbar As Boolean
     With myListView
-        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.Count > .Height
+        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.count > .Height
     End With
     
     If bScrollbar Then totWidth = totWidth - 15
@@ -1277,7 +1277,7 @@ ThrowException:
     
 End Sub
 
-Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
+Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
                               ByVal y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
@@ -1287,12 +1287,12 @@ Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
     ' - "on most computers 1 pixel = 15 TWIPS"
     '    https://stackoverflow.com/questions/36442535/vba-drag-drop-from-treeview-to-listview-listview-to-treeview-activex-controls
     Dim xInt As Single
-    xInt = x
+    xInt = X
     Dim yInt As Single
     yInt = y
            
     Dim li As ListItem
-    Set li = myListView.HitTest(x * factor, y * factor)
+    Set li = myListView.HitTest(X * factor, y * factor)
         
     Set LV_GetItemAt = li
         
