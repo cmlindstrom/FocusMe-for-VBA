@@ -228,7 +228,7 @@ ThrowException:
     
 End Sub
 
-Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
+Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
 
     If f_SuspendUI Then Exit Sub
 
@@ -245,7 +245,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
     
 End Sub
 
-Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, x As Single, y As Single)
+Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -265,9 +265,9 @@ Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Lon
 
 End Sub
 
-Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, x As Single, y As Single, State As Integer)
+Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single, State As Integer)
     Effect = 1
-    Set myListView.DropHighlight = myListView.HitTest(x * 15, y * 20)
+    Set myListView.DropHighlight = myListView.HitTest(X * 15, y * 20)
 End Sub
 
 ' Project Properties form
@@ -359,7 +359,7 @@ Public Function ImportFromMCL() As Projects
     Dim p As fmeProject
     
     Set olCategories = oNS.Categories
-    If olCategories.Count > 0 Then
+    If olCategories.count > 0 Then
         For Each olCategory In olCategories
             ' Create a new Project
             Set p = New fmeProject
@@ -388,7 +388,7 @@ Public Function ImportFromMCL() As Projects
             newList.AddItem p
             
             ' Temporary
-            If newList.Count > 20 Then Exit For
+            If newList.count > 20 Then Exit For
             
         Next
     Else
@@ -419,7 +419,7 @@ Public Function GetItemById(ByVal id As String) As fmeProject
     Set retProject = myItems.GetItemById(id)
     
     If IsNothing(retProject) Then
-        strTrace = "Failed to find a Project (" & id & ") in collection, items count: " & myItems.Count
+        strTrace = "Failed to find a Project (" & id & ") in collection, items count: " & myItems.count
         LogMessage "WARNING: " & strTrace, strRoutine
     End If
 
@@ -445,7 +445,7 @@ Public Function ParseProjectsFromString(ByVal strCat As String) As ArrayList
         strTrace = "Encountered an empty Categories string."
         GoTo ThrowException
     End If
-    If myItems.Items.Count = 0 Then
+    If myItems.Items.count = 0 Then
         strTrace = "Zero projects found try loading" & _
                     " the ProjectManager prior to calling this method."
         GoTo ThrowException
@@ -608,6 +608,58 @@ Finally:
 
 End Sub
 
+''' Returns a Project if one has been assigned to the
+''' specified Outlook Item
+Public Sub GetProject(ByVal oItem As Object, ByRef p As fmeProject)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetProject"
+    
+    On Error GoTo ThrowException
+    
+    If oItem Is Nothing Then
+        strTrace = "A null item was encountered."
+        GoTo ThrowException
+    End If
+    
+    Dim retProject As fmeProject
+    Set retProject = Nothing
+    
+    Dim strCat As String
+    strCat = oItem.Categories
+    
+    If Len(strCat) = 0 Then
+        strTrace = "No projects found in Categories property - string is empty."
+        GoTo ThrowException
+    End If
+    
+    Dim arList As ArrayList
+    Set arList = ParseProjectsFromString(strCat)
+    If arList Is Nothing Then
+        strTrace = "Fatal error while parsing the item's Categories."
+        GoTo ThrowException
+    End If
+    If arList.count > 0 Then
+        If arList.count = 1 Then
+            Set retProject = arList(0)
+        Else
+            strTrace = "Multiple categories or projects found - unhandled exception."
+            GoTo ThrowException
+        End If
+    Else
+        strTrace = "Failed to parse categories: " & strCat
+        GoTo ThrowException
+    End If
+    
+    Set p = retProject
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set p = Nothing
+    
+End Sub
 
 ' - Supporting Methods
 
@@ -730,7 +782,7 @@ Private Sub AddListViewItem(ByVal p As fmeProject, Optional ByVal idx As Integer
     End If
     
     ' Check the index
-    If idx < 0 Then idx = myListView.ListItems.Count + 1
+    If idx < 0 Then idx = myListView.ListItems.count + 1
 
     strTrace = "Adding Item to ListView (" & idx & "," & p.id & "," & p.Name & ")."
     Dim li As ListItem
@@ -835,7 +887,7 @@ Private Function FindListViewItem(ByVal p As fmeProject) As ListItem
     Set retItem = Nothing
     
     Dim i As Integer
-    For i = 1 To myListView.ListItems.Count
+    For i = 1 To myListView.ListItems.count
         Dim li As ListItem
         Set li = myListView.ListItems(i)
         If li.key = p.id Then
@@ -865,7 +917,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     myListView.ColumnHeaders.Clear
     
     ' Setup ListView Columns and Configuration
-    If myListView.ColumnHeaders.Count = 0 Then
+    If myListView.ColumnHeaders.count = 0 Then
         'Initialize the View
         Dim ch1 As ColumnHeader
         Dim ch2 As ColumnHeader
@@ -884,7 +936,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     myListView.ListItems.Clear
     
     ' Add current class collection
-    If myItems.Count > 0 Then
+    If myItems.count > 0 Then
     
         ' Sort the internal list
         Dim strSort As String
@@ -896,7 +948,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
           
         ' Load the ListView
         Dim i As Integer
-        For i = 0 To myItems.Items.Count - 1
+        For i = 0 To myItems.Items.count - 1
             Dim p As fmeProject
             Set p = myItems.Item(i)
                                  
@@ -909,7 +961,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
         
     End If
     
-    strTrace = "Items: " & myItems.Count & " items..."
+    strTrace = "Items: " & myItems.count & " items..."
     
     Exit Sub
     
@@ -953,7 +1005,7 @@ Private Sub ResizeLVColumns()
     ' if scrollbar present, make space
     Dim bScrollbar As Boolean
     With myListView
-        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.Count > .Height
+        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.count > .Height
     End With
     
     If bScrollbar Then totWidth = totWidth - 15
@@ -975,7 +1027,7 @@ ThrowException:
     
 End Sub
 
-Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
+Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
                               ByVal y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
@@ -985,12 +1037,12 @@ Private Function LV_GetItemAt(ByVal x As stdole.OLE_XPOS_PIXELS, _
     ' - "on most computers 1 pixel = 15 TWIPS"
     '    https://stackoverflow.com/questions/36442535/vba-drag-drop-from-treeview-to-listview-listview-to-treeview-activex-controls
     Dim xInt As Single
-    xInt = x
+    xInt = X
     Dim yInt As Single
     yInt = y
            
     Dim li As ListItem
-    Set li = myListView.HitTest(x * factor, y * factor)
+    Set li = myListView.HitTest(X * factor, y * factor)
         
     Set LV_GetItemAt = li
         
