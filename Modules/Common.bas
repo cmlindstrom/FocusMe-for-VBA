@@ -53,7 +53,7 @@ Public Enum enuDayOfWeek
 End Enum
 
 Public Type Point
-   x As Long
+   X As Long
    y As Long
 End Type
 
@@ -890,6 +890,32 @@ ThrowException:
 
 End Function
 
+''' Returns the size of the specified file in bytes
+Public Function FileLength(ByVal fullFilePath As String) As Long
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":FormatElapsedTime"
+        
+    On Error GoTo ThrowException
+    
+    If Len(fullFilePath) = 0 Then
+        strTrace = "File path was empty."
+        GoTo ThrowException
+    End If
+    
+    Dim l As Long
+    l = FileLen(fullFilePath)
+    
+    FileLength = l
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    FileLength = -1
+    
+End Function
+
 ''' Error Logger
 Public Sub LogMessage(errMsg As String, method As String)
 
@@ -934,7 +960,7 @@ Public Sub LogMessageEx(ByVal trace As String, _
    
 End Sub
 
-Public Sub TrimLogs()
+Public Sub TrimLogs(Optional ByVal rowsToKeep As Integer = 500)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -942,8 +968,11 @@ Public Sub TrimLogs()
     
     On Error GoTo ThrowException
     
-    Call ClearTraceLog(500) ' (500)
-    Call ClearErrorLog(500)
+    Call ClearTraceLog(rowsToKeep)
+    Call ClearErrorLog(rowsToKeep)
+    
+    strTrace = "Trimmed system logs to " & rowsToKeep & " lines."
+    LogMessage strTrace, strRoutine
     
     Exit Sub
     
@@ -998,8 +1027,7 @@ ThrowException:
 
 End Sub
 
-
-
+''' Writes the specified message to the Error log file
 Private Sub WriteToErrorLog(ByVal msg As String)
 
     Dim strTrace As String
@@ -1046,7 +1074,7 @@ End Sub
 ''' Clears the specified log file
 Private Sub ClearLog(ByVal logFilePath As String, _
             Optional ByVal keepLastRows As Boolean = True, _
-            Optional ByVal rowsToKeep As Integer = 200)
+            Optional ByVal rowsToKeep As Integer = 500)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -1253,6 +1281,10 @@ Public Sub AppendTextFile(ByVal filePath As String, ByVal fileContent As String)
     strRoutine = rootClass & ":AppendTextFile"
     
     On Error GoTo ThrowException
+    
+    If FileLength(filePath) > 500000 Then
+        TrimLogs 1000
+    End If
 
     Dim TextFile As Integer
 
