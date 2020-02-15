@@ -1816,6 +1816,7 @@ Public Sub ProcessContextMenuSelection(ByVal id As String, ByRef t As Outlook.Ta
               ' Handled in the ContextMenu form
             ' Ignore it here
         Case 1020 ' Open associated Project Properties
+            OpenProject t
         Case 1021 ' Open associated Project's Windows Folder
         
         Case 1022 ' Open associated Project's Outlook Folder
