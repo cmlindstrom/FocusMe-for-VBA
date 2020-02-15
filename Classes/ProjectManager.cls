@@ -342,6 +342,25 @@ ThrowException:
     
 End Sub
 
+''' Refreshes the internal Projects collection from the DB
+Public Sub Reload()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":Load"
+    
+    On Error GoTo ThrowException
+    
+    ' Retrieve Projects from DataStore
+    Set myItems.Items = GetProjectsFromDB
+       
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
 ''' Reviews the Outlook Master Categories List
 ''' Returns a collection of imported projects from the MCL
 Public Function ImportFromMCL() As Projects

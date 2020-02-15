@@ -18,6 +18,8 @@ Private WithEvents singleInspector As Outlook.Inspector
 Attribute singleInspector.VB_VarHelpID = -1
 Private ut As Utilities
 Attribute ut.VB_VarHelpID = -1
+Private WithEvents pm As ProjectManager
+Attribute pm.VB_VarHelpID = -1
 
 ' - -  Settings
 Private stgs As Settings
@@ -485,6 +487,8 @@ Private Sub Class_Initialize()
     Set ut = New Utilities
     Set stgs = New Settings
     
+    Set pm = New ProjectManager
+    
 End Sub
 
 Private Sub Class_Terminate()
@@ -722,6 +726,37 @@ ThrowException:
 
 End Sub
 
+''' Open Task's associated Project
+Public Sub OpenProject(Optional ByVal t As Outlook.TaskItem = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":DeleteTask"
+    
+    If t Is Nothing Then
+        Set t = selItem
+    Else
+        Set selItem = t
+    End If
+    
+    If IsNothing(t) Then
+        strTrace = "Incoming TaskItem was null."
+        GoTo ThrowException
+    End If
+    
+    Dim myProject As fmeProject
+    pm.GetProject t, myProject
+    If Not myProject Is Nothing Then
+        pm.OpenProject myProject
+    End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
 ''' Creates a new Task to Edit
 Public Sub NewTask(Optional p As fmeProject = Nothing)
 
@@ -813,6 +848,7 @@ Public Sub DisplayRelatedMail(Optional ByVal t As Outlook.TaskItem = Nothing)
 
 End Sub
 
+''' Creates an Email about the specified Task
 Public Sub MessageTask(ByVal t As Outlook.TaskItem)
 
     Dim strTrace As String
@@ -1474,6 +1510,8 @@ Public Function GetContextMenuTwoTier(ByVal t As Outlook.TaskItem) As ContextMen
 
     Dim mni As ContextMenuItem
     
+    Dim cmSub As ContextMenu
+    
     ' Open Task
     Set mni = New ContextMenuItem
     mni.Caption = "Open..."
@@ -1481,6 +1519,65 @@ Public Function GetContextMenuTwoTier(ByVal t As Outlook.TaskItem) As ContextMen
     mni.itemType = Button
     mni.UID = 1001
     cm.AddItem mni
+
+    ' Reload Project List from DB
+    pm.Reload
+    
+    ' Check for an associated Project
+    Dim myProject As fmeProject
+    pm.GetProject t, myProject
+    
+    If Not myProject Is Nothing Then
+    
+        ' - - Open Project SubMenu
+        Set cmSub = New ContextMenu
+        
+        ' Open Associated Project
+        Set mni = New ContextMenuItem
+        mni.Caption = "Open Project"
+        mni.Enabled = True
+        mni.itemType = Button
+        mni.UID = 1020
+        cmSub.AddItem mni
+    
+        If Len(myProject.WindowsFolder) > 0 Then
+            Set mni = New ContextMenuItem
+            mni.Caption = "Windows Folder"
+            mni.Enabled = True
+            mni.itemType = Button
+            mni.UID = 1021
+            cmSub.AddItem mni
+        End If
+    
+        If Len(myProject.OutlookFolder) > 0 Then
+            Set mni = New ContextMenuItem
+            mni.Caption = "Outlook Folder"
+            mni.Enabled = True
+            mni.itemType = Button
+            mni.UID = 1022
+            cmSub.AddItem mni
+        End If
+        
+        If cmSub.count > 1 Then
+            ' - - Open Project >>
+            Set mni = New ContextMenuItem
+            mni.Caption = "Open Project"
+            mni.Enabled = True
+            mni.itemType = Menu
+            mni.UID = 10190
+            Set mni.SubMenu = cmSub
+            cm.AddItem mni
+        Else
+        ' - - Open Project...
+            Set mni = New ContextMenuItem
+            mni.Caption = "Open Project..."
+            mni.Enabled = True
+            mni.itemType = Menu
+            mni.UID = 1020
+            ' Set mni.SubMenu = cmSub
+            cm.AddItem mni
+        End If
+    End If
     
     ' Print Task
     Set mni = New ContextMenuItem
@@ -1580,8 +1677,7 @@ Public Function GetContextMenuTwoTier(ByVal t As Outlook.TaskItem) As ContextMen
     mni.UID = 1007
     cm.AddItem mni
     
-    ' - - Reschedule Menu
-    Dim cmSub As ContextMenu
+    ' - - Reschedule SubMenu
     Set cmSub = New ContextMenu
     
     ' Tomorrow
@@ -1713,16 +1809,25 @@ Public Sub ProcessContextMenuSelection(ByVal id As String, ByRef t As Outlook.Ta
         Case 1017   ' Copy Task Tag
             strTrace = GetTaskTag(t)
             CopyToClipboard strTrace
-        Case 1018   ' Present Reschedule Menu
+        Case 1018   ' Present Reschedule SubMenu
             ' Handled in the ContextMenu form
             ' Ignore it here
+        Case 1019 ' Present Open Project SubMenu
+              ' Handled in the ContextMenu form
+            ' Ignore it here
+        Case 1020 ' Open associated Project Properties
+        Case 1021 ' Open associated Project's Windows Folder
+        
+        Case 1022 ' Open associated Project's Outlook Folder
+        
+        Case 1024 ' Schedule Time
+        
         Case Else
             strTrace = "Unrecognised menu code: " & id & " - ignoring request."
             LogMessage strTrace, strRoutine
     End Select
 
 End Sub
-
 
 ' - Supporting Methods
 
