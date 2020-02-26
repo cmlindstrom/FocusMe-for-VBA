@@ -120,6 +120,8 @@ End Sub
         strTrace = "General Fault."
         Dim strRoutine As String
         strRoutine = rootClass & ":GetCurrentProfileName"
+        
+        On Error GoTo ThrowException
                
         strTrace = "Interrogating Namespace."
         GetCurrentProfileName = oNS.CurrentProfileName
@@ -158,7 +160,7 @@ ThrowException:
         Dim vRetVal As String
 
         Set olCategories = oNS.Categories
-        If olCategories.Count > 0 Then
+        If olCategories.count > 0 Then
             For Each olCategory In olCategories
                 If LCase(olCategory.Name) = LCase(CategoryName) Then
                     vRetVal = CStr(olCategory.CategoryID)
@@ -253,7 +255,7 @@ ThrowException:
         
         strTrace = "Processing category '" & Name & "' for id: " & mclId & "."
 
-        If oNS.Categories.Count > 0 Then
+        If oNS.Categories.count > 0 Then
             For Each olCategory In oNS.Categories
                 If olCategory.CategoryID = mclId Then
                     If (olCategory.Name = Name) And _
@@ -313,7 +315,7 @@ ThrowException:
         Dim bretVal As Boolean
         bretVal = True
 
-        If oNS.Categories.Count > 0 Then
+        If oNS.Categories.count > 0 Then
             For Each olCategory In oNS.Categories
                 If LCase(CategoryName) = LCase(olCategory.Name) Then
                     oNS.Categories.Remove olCategory.CategoryID
@@ -518,6 +520,66 @@ ThrowException:
         MoveToArchive = False
     
     End Function
+    
+    '''  Selects an Outlook folder for the ActiveExplorer
+    Public Sub SelectFolderFromPath(ByVal oFolderPath As String)
+    
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":SelectFolderFromPath"
+        
+        On Error GoTo ThrowException
+        
+        If Len(oFolderPath) = 0 Then
+            strTrace = "No folder path was specified."
+            GoTo ThrowException
+        End If
+        
+        Dim f As Outlook.Folder
+        Set f = GetFolderByPath(oFolderPath)
+        If IsNothing(f) Then
+            strTrace = "Failed to retrieve the Outlook folder form path: " & oFolderPath
+            GoTo ThrowException
+        End If
+        
+        SelectFolder f
+        
+        Exit Sub
+        
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+    
+    End Sub
+    
+    '''  Selects an Outlook folder for the ActiveExplorer
+    Public Sub SelectFolder(ByVal f As Outlook.Folder)
+    
+        Dim strTrace As String
+        strTrace = "General Fault."
+        Dim strRoutine As String
+        strRoutine = rootClass & ":SelectFolder"
+        
+        On Error GoTo ThrowException
+        
+        If IsNothing(f) Then
+            strTrace = "Folder object was null."
+            GoTo ThrowException
+        End If
+        
+        ' ThisOutlookSession.ActiveExplorer.CurrentFolder = f
+        
+        ' app.ActiveExplorer.CurrentFolder = oNS.GetDefaultFolder(olFolderContacts)
+
+        ' Creates a new Outlook Explorer Window with the specified Folder displayed
+        f.Display
+
+        Exit Sub
+        
+ThrowException:
+        LogMessageEx strTrace, err, strRoutine
+    
+    End Sub
 
     ''' Returns an Outlook Folder using the folder's path
     Public Function GetFolderByPath(ByVal strPath As String) As Outlook.Folder
@@ -526,6 +588,8 @@ ThrowException:
         strTrace = "General Fault."
         Dim strRoutine As String
         strRoutine = rootClass & ":GetFolderByPath"
+        
+        On Error GoTo ThrowException
         
         Dim retList As Collection
         Set retList = GetFoldersWithName(strPath)
@@ -536,10 +600,10 @@ ThrowException:
         
         Dim retFolder As Outlook.Folder
         
-        If retList.Count > 0 Then
+        If retList.count > 0 Then
             Set retFolder = retList.Item(1)
             
-            If retList.Count > 1 Then
+            If retList.count > 1 Then
                 strTrace = "WARNING: found multiple folders for query: " & strPath
                 LogMessage strTrace, strRoutine
             End If
@@ -581,7 +645,7 @@ ThrowException:
             strTrace = "Evaluating store: " & oStore.DisplayName
             Dim myList As Collection
             Set myList = GetFoldersWithNameFromStore(strFolderName, oStore)
-            If Not IsNothing(myList) And myList.Count > 0 Then
+            If Not IsNothing(myList) And myList.count > 0 Then
                 For Each f In myList
                     retList.Add (f)
                 Next
@@ -668,7 +732,7 @@ ThrowException:
  ' Dim fldr As Outlook.Folder
  ' fldr.DefaultItemType
 
-        If myFolder.Folders.Count > 0 Then
+        If myFolder.Folders.count > 0 Then
             ' Start search at the top of the hierarchy
             srcName = UCase(Name)
             For Each f In myFolder.Folders
@@ -706,10 +770,10 @@ ThrowException:
                 End If
                 
                 strTrace = "Look to see if current folder has sub-folders."
-                If f.Folders.Count > 0 Then
+                If f.Folders.count > 0 Then
                     Dim fldrs As Collection
                     Set fldrs = SearchFolderByName(f, Name)
-                    If Not IsNothing(fldrs) And fldrs.Count > 0 Then
+                    If Not IsNothing(fldrs) And fldrs.count > 0 Then
                         For Each fd In fldrs
                             retFldrs.Add (fd)
                         Next
@@ -769,14 +833,14 @@ ThrowException:
             LogMessage strTrace, strRoutine
             
             Set myColl = IndexFoldersInStore(oStore)
-            If Not IsNothing(myColl) And myColl.Count > 0 Then
+            If Not IsNothing(myColl) And myColl.count > 0 Then
                 For Each f In myColl.Items
                     retColl.AddItem f
                 Next
             End If
         Next
         
-        strTrace = "Found " & retColl.Count & " folders while indexing..."
+        strTrace = "Found " & retColl.count & " folders while indexing..."
         LogMessage strTrace, strRoutine
         
         Set IndexFolders = retColl
@@ -817,7 +881,7 @@ ThrowException:
                 LogMessage "WARNING: " & strTrace, strRoutine
                 Set retColl = New fmeFolders
             Else
-                strTrace = "Found " & retColl.Count & " folders in " & oRootFolder.Name
+                strTrace = "Found " & retColl.count & " folders in " & oRootFolder.Name
                 LogMessage strTrace, strRoutine
             End If
         
@@ -857,7 +921,7 @@ ThrowException:
         Dim tFldr As fmeFolder
         Dim fldrs As fmeFolders
         
-        If oParentFolder.Folders.Count > 0 Then
+        If oParentFolder.Folders.count > 0 Then
         
             Dim oTF As Outlook.Folder
             For Each oTF In oParentFolder.Folders
@@ -887,17 +951,17 @@ ThrowException:
                 retColl.AddItem fldr
                 
                 strTrace = "Added folder to collection: " & oTF.Name & _
-                    " folder count: " & retColl.Count
+                    " folder count: " & retColl.count
                 LogMessage strTrace, strRoutine
               
                 ' Recurse if folder has sub-folders
-                If oTF.Folders.Count > 0 Then
+                If oTF.Folders.count > 0 Then
                     strTrace = "Recursing folder: " & oTF.Name
                     LogMessage strTrace, strRoutine
                 
                     Set fldrs = IndexFoldersWithParent(oTF)
                     If Not IsNothing(fldrs) Then
-                        If fldrs.Count > 0 Then
+                        If fldrs.count > 0 Then
                             For Each tFldr In fldrs.Items
                                 retColl.AddItem tFldr
                             Next
@@ -919,7 +983,7 @@ SkipFolder1:
             retColl.AddItem fldr
         End If
         
-        strTrace = "Returning a collection of " & retColl.Count & " folders."
+        strTrace = "Returning a collection of " & retColl.count & " folders."
         LogMessage strTrace, strRoutine
         
         Set IndexFoldersWithParent = retColl
@@ -953,7 +1017,7 @@ ThrowException:
             strTrace = "Failed to query the datastore."
             GoTo ThrowException
         End If
-        If arList.Count = 0 Then
+        If arList.count = 0 Then
             strTrace = "Found an empty Folder collection - try indexing via the Options dialog."
             GoTo ThrowException
         End If
@@ -1739,7 +1803,7 @@ ThrowException:
 
         strTrace = "Get total message count for folder '" & strPath & "'."
         Dim cnt As Integer
-        cnt = oMailFolder.Items.Count
+        cnt = oMailFolder.Items.count
         
 '"urn:schemas:httpmail:textdescription" LIKE '%0B%'
 

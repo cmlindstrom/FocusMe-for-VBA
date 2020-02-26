@@ -16,6 +16,9 @@ Private Const rootClass As String = "ProjectManager"
 Private ut As Utilities
 Private oNS As Outlook.NameSpace
 
+' - -  Settings
+Private stgs As Settings
+
 Private WithEvents myListView As MSComctlLib.ListView
 Attribute myListView.VB_VarHelpID = -1
 
@@ -241,7 +244,63 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
     
     If Button = 2 Then
         ' Render the context menu
+        
+        ' Get the pointed to listview item
+        Dim li As ListItem
+        Set li = LV_GetItemAt(X, y)
+        If Not IsNothing(li) Then
+        
+            ' Select Item if not already selected
+            Dim sLi As ListItem
+            Set sLi = myListView.SelectedItem
+        
+           ' Get selected Project
+            Dim p As fmeProject
+            Set p = GetItemById(li.key)
+            If IsNothing(p) Then
+                strTrace = "WARNING: Failed to find a selected project, id: " & li.key
+                GoTo ThrowException
+            End If
+            strTrace = "Right clicked on project: " & p.Subject
+
+            ' Create context menu
+            strTrace = "Create the context menu."
+            Dim cMenu As ContextMenu
+            Dim cMenu2 As ContextMenu
+            
+            strTrace = "Prepare context menu location."
+            Dim xSgl As Single
+            xSgl = X
+            Dim ySgl As Single
+            ySgl = y
+            
+            strTrace = "Present context menu."
+            Dim bUseWindowsMenus As Boolean
+            bUseWindowsMenus = stgs.UseContextMenuWindows
+            
+            Dim id As Long
+                        
+            If bUseWindowsMenus Then
+                Set cMenu = GetContextMenu(p)
+                id = ShowPopup(myListView, cMenu, xSgl, ySgl)
+            Else
+                Set cMenu2 = GetContextMenu(p)
+                id = ShowMenu(cMenu2)
+            End If
+       
+            strTrace = "Selected menu item: " & id
+            LogMessage strTrace, strRoutine
+            
+            Call ProcessContextMenuSelection(id, p)
+        
+        End If
+        
     End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
     
 End Sub
 
@@ -295,6 +354,7 @@ Private Sub Class_Initialize()
     Set myItems = New Projects
     Set oNS = GetNamespace("MAPI")
     Set ut = New Utilities
+    Set stgs = New Settings
     
     Set selItems = New Projects
     
@@ -521,6 +581,7 @@ End Sub
 
 ' - - Project Commands
 
+''' Opens an existing project
 Public Sub OpenProject(Optional ByVal p As fmeProject = Nothing)
 
     Dim strTrace As String
@@ -680,6 +741,179 @@ ThrowException:
     
 End Sub
 
+''' Creates a new task assigned to the current or specified project
+Public Sub NewTask(Optional ByVal p As fmeProject = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":NewTask"
+
+    If p Is Nothing Then
+        Set p = selItem
+    Else
+        Set selItem = p
+    End If
+    
+    If IsNothing(p) Then
+        strTrace = "Incoming Project was null."
+        GoTo ThrowException
+    End If
+    
+    ' Create a new Task
+    Dim t As Outlook.TaskItem
+    Set t = ut.CreateTask
+    
+    ' If a project provided, assign task to the Project
+    t.Categories = p.Subject
+    
+    ' Prepare to present Outlook Task UI
+    ' Set selItem = t
+    ' Set singleInspector = t.GetInspector
+    
+    ' Show the Task using the Outlook interface
+    t.Display
+        
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
+''' Creates a new email message assigned to the current or specified project
+Public Sub NewMessage(Optional ByVal p As fmeProject = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":NewMessage"
+
+    If p Is Nothing Then
+        Set p = selItem
+    Else
+        Set selItem = p
+    End If
+    
+    If IsNothing(p) Then
+        strTrace = "Incoming Project was null."
+        GoTo ThrowException
+    End If
+    
+    ' Create a new email message
+    Dim m As Outlook.MailItem
+    Set m = ut.CreateMailItem
+    
+    ' If a project provided, assign email to the Project
+    m.Categories = p.Subject
+    
+    ' Prepare to present Outlook Task UI
+    ' Set selItem = t
+    ' Set singleInspector = t.GetInspector
+    
+    ' Show the MailItem using the Outlook interface
+    m.Display
+
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
+''' Creates a new Appointment assigned to the current or specified project
+Public Sub NewAppointment(Optional ByVal p As fmeProject = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":NewAppointment"
+
+    If p Is Nothing Then
+        Set p = selItem
+    Else
+        Set selItem = p
+    End If
+    
+    If IsNothing(p) Then
+        strTrace = "Incoming Project was null."
+        GoTo ThrowException
+    End If
+    
+    ' Create a new appointmentItem
+    Dim a As Outlook.AppointmentItem
+    Set a = ut.CreateAppointment
+    
+    ' If a project provided, assign item to the Project
+    a.Categories = p.Subject
+    
+    ' Prepare to present Outlook Task UI
+    ' Set selItem = t
+    ' Set singleInspector = t.GetInspector
+    
+    ' Show the Appointment using the Outlook interface
+    a.Display
+
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+''' Opens the current or specified Project's Windows folder
+Public Sub OpenWindowsFolder(Optional ByVal p As fmeProject = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":OpenWindowsFolder"
+
+    If p Is Nothing Then
+        Set p = selItem
+    Else
+        Set selItem = p
+    End If
+    
+    If IsNothing(p) Then
+        strTrace = "Incoming Project was null."
+        GoTo ThrowException
+    End If
+    
+    If Len(p.WindowsFolder) = 0 Then
+        strTrace = "No Windows folder specified for project: " & p.Subject
+        GoTo ThrowException
+    End If
+    
+    Dim strCmd As String
+    strCmd = "explorer.exe " & p.WindowsFolder
+    
+    Dim retCode As Double
+    retCode = Shell(strCmd, vbNormalFocus)
+    If retCode = 0 Then
+        strTrace = "Failed to run Shell command: " & strCmd
+        GoTo ThrowException
+    End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
+End Sub
+
+''' Opens the current or specified Project's Outlook folder
+Public Sub OpenOutlookFolder(Optional ByVal p As fmeProject = Nothing)
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":OpenOutlookFolder"
+    
+    ut.SelectFolderFromPath p.OutlookFolder
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
 ' - Supporting Methods
 
 Private Function GetProjectsFromDB() As ArrayList
@@ -709,6 +943,215 @@ ThrowException:
     LogMessageEx strTrace, err, strRoutine
     
 End Function
+
+''' Returns a collection of ContextMenuItems
+Public Function GetContextMenu(ByVal p As fmeProject) As ContextMenu
+
+    ' +-----------------
+    ' | Open            (1001)
+    ' | New          >> (1002)  +----------------+
+    '                           | Task              (10021)
+    '                           | Email             (10022)
+    '                           | Appointment       (10023)
+    '                           +----------------+
+    ' | Open Folder  >> (1003)  +----------------+
+    '                           | Windows Folder    (10031)
+    '                           | Outlook Folder    (10032)
+    '                           +----------------+
+    ' +-----------------
+    ' | Delete          (1020)
+    ' +-----------------
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":GetContextMenu"
+    
+    On Error GoTo ThrowException
+    
+    Dim cm As ContextMenu
+    Set cm = New ContextMenu
+
+    Dim mni As ContextMenuItem
+    
+    Dim cmSub As ContextMenu
+    
+    ' Open
+    Set mni = New ContextMenuItem
+    mni.Caption = "Open..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1001
+    cm.AddItem mni
+    
+    ' New Outlook Item Submenu
+    Set cmSub = New ContextMenu
+        
+    ' - New Task
+    Set mni = New ContextMenuItem
+    mni.Caption = "Task..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 10021
+    cmSub.AddItem mni
+    
+    ' - New Email
+    Set mni = New ContextMenuItem
+    mni.Caption = "Email..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 10022
+    cmSub.AddItem mni
+    
+    ' - New Appointment
+    Set mni = New ContextMenuItem
+    mni.Caption = "Appointment..."
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 10023
+    cmSub.AddItem mni
+    
+    ' Add New Outlook Item Submenu
+    Set mni = New ContextMenuItem
+    mni.Caption = "New"
+    mni.Enabled = True
+    mni.itemType = Menu
+    mni.UID = 1002
+    Set mni.SubMenu = cmSub
+    cm.AddItem mni
+    
+    ' Open Folder
+    If Len(p.OutlookFolder) > 0 Or Len(p.WindowsFolder) > 0 Then
+        If Len(p.OutlookFolder) > 0 And Len(p.WindowsFolder) > 0 Then
+            ' Prepare cascading menu
+            
+            ' New Open Folder SubMenu
+            Set cmSub = New ContextMenu
+            
+            ' Open Windows Folder
+            Set mni = New ContextMenuItem
+            mni.Caption = "Windows Folder"
+            mni.Enabled = True
+            mni.itemType = Button
+            mni.UID = 10031
+            cmSub.AddItem mni
+            
+            ' Open Outlook Folder
+            Set mni = New ContextMenuItem
+            mni.Caption = "Outlook Folder"
+            mni.Enabled = True
+            mni.itemType = Button
+            mni.UID = 10032
+            cmSub.AddItem mni
+        
+            ' Add SubMenu to Main Menu
+            Set mni = New ContextMenuItem
+            mni.Caption = "Open Folder"
+            mni.Enabled = True
+            mni.itemType = Menu
+            mni.UID = 1003
+            Set mni.SubMenu = cmSub
+            cm.AddItem mni
+            
+        Else
+            ' Prepare one menuItem
+            If Len(p.OutlookFolder) > 0 Then
+                Set mni = New ContextMenuItem
+                mni.Caption = "Outlook Folder"
+                mni.Enabled = True
+                mni.itemType = Button
+                mni.UID = 10032
+                cm.AddItem mni
+            End If
+            If Len(p.WindowsFolder) > 0 Then
+                Set mni = New ContextMenuItem
+                mni.Caption = "Windows Folder"
+                mni.Enabled = True
+                mni.itemType = Button
+                mni.UID = 10031
+                cm.AddItem mni
+            End If
+        End If
+    Else
+        strTrace = "No folders specified for this project: " & p.Subject
+        LogMessage strTrace, strRoutine
+    End If
+    
+    ' Separator
+    Set mni = New ContextMenuItem
+    mni.Caption = "-"
+    mni.Enabled = True
+    mni.itemType = Separator
+    mni.UID = 1099
+    cm.AddItem mni
+    
+    ' Delete
+    Set mni = New ContextMenuItem
+    mni.Caption = "Delete"
+    mni.Enabled = True
+    mni.itemType = Button
+    mni.UID = 1020
+    cm.AddItem mni
+    
+    Set GetContextMenu = cm
+    
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Set GetContextMenu = Nothing
+
+End Function
+
+' - - Menus Supporting Methods
+
+Public Sub ProcessContextMenuSelection(ByVal id As String, ByRef p As fmeProject)
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":ProcessContextMenuSelection"
+    
+    If Len(id) = 0 Then
+        strTrace = "No menu id provided."
+        GoTo ThrowException
+    End If
+    If IsNothing(p) Then
+        strTrace = "A null project encountered."
+        GoTo ThrowException
+    End If
+    
+    Dim num As Integer
+    num = CInt(id)
+    Select Case num
+        Case 1001 ' Open Project
+            OpenProject p
+        Case 1002 ' New Outlook Item Menu
+            ' Ignored, handled in the ContextMenu
+        Case 10021 ' New Task
+            NewTask p
+        Case 10022 ' New Email
+            NewMessage p
+        Case 10023 ' New Appointment
+            NewAppointment p
+        Case 1003 ' Open Folder subMenu
+            ' Ignored, handled by ContextMenu
+        Case 10031 ' Open Windows Folder
+            OpenWindowsFolder p
+        Case 10032 ' Open Outlook Folder
+            OpenOutlookFolder p
+        Case 1099 ' Seperator
+            strTrace = "Ignoring call."
+        Case Else
+            strTrace = "Unrecognised menu code: " & id & " - ignoring request."
+            LogMessage strTrace, strRoutine
+    End Select
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
 
 ' - - Collection Supporting Methods
 

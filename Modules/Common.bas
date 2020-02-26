@@ -1027,6 +1027,7 @@ ThrowException:
 
 End Sub
 
+
 ''' Writes the specified message to the Error log file
 Private Sub WriteToErrorLog(ByVal msg As String)
 
@@ -1117,7 +1118,7 @@ Private Sub ClearLog(ByVal logFilePath As String, _
         k = UBound(rows) - 1
         For i = j To k
             strLine = Trim(rows(i))
-            If Len(strLine) > 0 Then strKeep = strKeep & strLine & vbCrLf
+            If Len(strLine) > 0 Then strKeep = strKeep & strLine
             
             strTrace = "Line length (" & i & ") = " & Len(strLine)
             Debug.Print strTrace

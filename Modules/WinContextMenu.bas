@@ -29,7 +29,7 @@ End Type
 ' Type required by GetCursorPos
 Private Type POINTAPI
         X As Long
-        Y As Long
+        y As Long
 End Type
 
 ' Constants required by TrackPopupMenu
@@ -39,23 +39,43 @@ Private Const TPM_RETURNCMD = &H100
 Private Const TPM_RIGHTBUTTON = &H2&
 
 ' Constants required by MENUITEMINFO type
-Private Const MIIM_STATE = &H1
+' fMask
+Private Const MIIM_BITMAP = &H80
+Private Const MIIM_CHECKMARKS = &H8
+Private Const MIIM_DATA = &H20
+Private Const MIIM_FTYPE = &H100
 Private Const MIIM_ID = &H2
+Private Const MIIM_STATE = &H1
+Private Const MIIM_STRING = &H40
+Private Const MIIM_SUBMENU = &H4
 Private Const MIIM_TYPE = &H10
-Private Const MFT_STRING = &H0
-Private Const MFT_SEPARATOR = &H800
+
+' fState
+Private Const MFS_CHECKED = &H8
 Private Const MFS_DEFAULT = &H1000
+Private Const MFS_DISABLED = &H3
 Private Const MFS_ENABLED = &H0
 Private Const MFS_GRAYED = &H1
+Private Const MFS_HILITE = &H80
+Private Const MFS_UNCHECKED = &H0
+Private Const MFS_UNHILITE = &H0
+
+'fType
+Private Const MFT_BITMAP = &H4
+Private Const MFT_MENUBARBREAK = &H20
+Private Const MFT_MENUBREAK = &H40
+Private Const MFT_RADIOCHECK = &H200
+Private Const MFT_SEPARATOR = &H800
+Private Const MFT_STRING = &H0
 
 ' API declarations
 Private Declare PtrSafe Function CreatePopupMenu Lib "user32" () As Long
 Private Declare PtrSafe Function InsertMenuItem Lib "user32" Alias "InsertMenuItemA" (ByVal hMenu As Long, ByVal un As Long, ByVal bool As Boolean, ByRef lpcMenuItemInfo As MENUITEMINFO) As Long
-Private Declare PtrSafe Function TrackPopupMenu Lib "user32" (ByVal hMenu As Long, ByVal wFlags As Long, ByVal X As Long, ByVal Y As Long, ByVal nReserved As Long, ByVal hwnd As Long, lprc As RECT) As Long
+Private Declare PtrSafe Function TrackPopupMenu Lib "user32" (ByVal hMenu As Long, ByVal wFlags As Long, ByVal X As Long, ByVal y As Long, ByVal nReserved As Long, ByVal hwnd As Long, lprc As RECT) As Long
 Private Declare PtrSafe Function DestroyMenu Lib "user32" (ByVal hMenu As Long) As Long
 Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
 Private Declare PtrSafe Function GetCursorPos Lib "user32" (lpPoint As POINTAPI) As Long
-Private Declare PtrSafe Function SetCursorPos Lib "user32" (ByVal X As Integer, ByVal Y As Integer) As Long
+Private Declare PtrSafe Function SetCursorPos Lib "user32" (ByVal X As Integer, ByVal y As Integer) As Long
 
 ' Constants for Keys
 Public Const VK_LBUTTON = &H1
@@ -98,7 +118,7 @@ Public Function IsKeyPressed(ByVal key As Long) As Boolean
 End Function
 
 ''' Moves the cursor or mouse pointer to the specified absolute coordinates
-Public Function SetCursorPosition(ByVal X As Integer, ByVal Y As Integer) As Boolean
+Public Function SetCursorPosition(ByVal X As Integer, ByVal y As Integer) As Boolean
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -106,15 +126,15 @@ Public Function SetCursorPosition(ByVal X As Integer, ByVal Y As Integer) As Boo
     
     On Error GoTo ThrowException
     
-    If X < 0 Or Y < 0 Then
+    If X < 0 Or y < 0 Then
         strTrace = "Invalid coordinates specified."
         GoTo ThrowException
     End If
     
     Dim l As Long
-    l = SetCursorPos(X, Y)
+    l = SetCursorPos(X, y)
     If l > 0 Then
-        strTrace = "Cursor moved to coordinates (" & X & "," & Y & ")."
+        strTrace = "Cursor moved to coordinates (" & X & "," & y & ")."
         LogMessage strTrace, strRoutine
     Else
         strTrace = "Failed to set the cursor to a new position using the Windows API."
@@ -132,7 +152,7 @@ End Function
 
 ''' Returns the X and Y coordinates of the absolute position of the cursor or
 ''' mouse position
-Public Function GetCursorPosition(ByRef X As Integer, ByRef Y As Integer) As Boolean
+Public Function GetCursorPosition(ByRef X As Integer, ByRef y As Integer) As Boolean
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -146,7 +166,7 @@ Public Function GetCursorPosition(ByRef X As Integer, ByRef Y As Integer) As Boo
     l = GetCursorPos(pt)
     If l > 0 Then
         X = pt.X
-        Y = pt.Y
+        y = pt.y
     Else
         strTrace = "An error occurred while using the Windows API."
         GoTo ThrowException
@@ -179,7 +199,7 @@ End Function
 ''' Shows a FME ContextMenu Form
 ''' Returns the selected menu item code
 Public Function ShowMenu(cMenu As ContextMenu, _
-                Optional X As Long = -1, Optional Y As Long = -1) As Long
+                Optional X As Long = -1, Optional y As Long = -1) As Long
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -209,7 +229,7 @@ Public Function ShowMenu(cMenu As ContextMenu, _
     Else
         ' Place it at the requested position
         mX = X
-        mY = Y
+        mY = y
     End If
     
     frm.SetPosition mX, mY
@@ -235,7 +255,7 @@ End Function
 
 ''' Shows a Windows Popup Menu
 ''' Returns the selected menu item code
-Public Function ShowPopup(ctl As MSForms.control, cMenu As ContextMenu, X As Single, Y As Single) As Long
+Public Function ShowPopup(ctl As MSForms.control, cMenu As ContextMenu, X As Single, y As Single) As Long
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -255,7 +275,7 @@ Public Function ShowPopup(ctl As MSForms.control, cMenu As ContextMenu, X As Sin
     ' Set oControl = ctl 'oForm.ActiveControl
         
     ' If click is outside the calling control, do nothing
-    If X > ctl.Width Or Y > ctl.Height Or X < 0 Or Y < 0 Then
+    If X > ctl.Width Or y > ctl.Height Or X < 0 Or y < 0 Then
         strTrace = "Outside control limits - ignoring menu call."
         GoTo ThrowException
     End If
@@ -393,7 +413,7 @@ Private Function GetSelection(ByVal cMenu As ContextMenu) As Long
     ' Create new popup menu
     menu_hwnd = CreatePopupMenu
     
-    ' Process Context Menu
+    ' Process Context Menu - need to add submenu processing here
     Dim i As Long
     i = 1
     Dim mni As ContextMenuItem
@@ -411,7 +431,7 @@ Private Function GetSelection(ByVal cMenu As ContextMenu) As Long
     GetSelection = TrackPopupMenu _
                     (menu_hwnd, _
                      TPM_LEFTALIGN Or TPM_TOPALIGN Or TPM_RETURNCMD Or TPM_RIGHTBUTTON, _
-                     oPointAPI.X, oPointAPI.Y, _
+                     oPointAPI.X, oPointAPI.y, _
                      0, form_hwnd, oRect)
         
     ' Destroy the menu
@@ -575,7 +595,7 @@ Private Function GetSelectionOld(ByVal cMenu As ContextMenu) As Long
     GetSelectionOld = TrackPopupMenu _
                     (menu_hwnd, _
                      TPM_LEFTALIGN Or TPM_TOPALIGN Or TPM_RETURNCMD Or TPM_RIGHTBUTTON, _
-                     oPointAPI.X, oPointAPI.Y, _
+                     oPointAPI.X, oPointAPI.y, _
                      0, form_hwnd, oRect)
         
     ' Destroy the menu
