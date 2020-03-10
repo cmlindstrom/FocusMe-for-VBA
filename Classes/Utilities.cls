@@ -36,9 +36,9 @@ End Property
 
 Private Sub Class_Initialize()
 
-    Set oNS = GetNamespace("MAPI")
-
-    Set app = oNS.Application
+    ' Set app = oNS.Application
+    Set app = ThisOutlookSession.Application
+    Set oNS = app.GetNamespace("MAPI") 'GetNamespace("MAPI")
     
     Set stgs = New Settings
 
@@ -253,19 +253,33 @@ ThrowException:
         ' There seems to be some issue with updating the name of an MCL name, therefore
         ' need to remove and add versus simply updating the specified category
         
-        strTrace = "Processing category '" & Name & "' for id: " & mclId & "."
+        strTrace = "Processing category '" & Name & "' for id: " & mclId & ", Color: " & Color & "."
+        LogMessage strTrace, strRoutine
 
+        Dim i As Integer
         If oNS.Categories.count > 0 Then
-            For Each olCategory In oNS.Categories
+            For i = 1 To oNS.Categories
+                Set olCategory = oNS.Categories(i)
                 If olCategory.CategoryID = mclId Then
+                    ' Check for substantive Change
                     If (olCategory.Name = Name) And _
                             (olCategory.Color = Color) Then
                         ' Nothing changed
+                        strTrace = "No change detected."
+                        LogMessage strTrace, strRoutine
+                        
                         bretVal = olCategory.CategoryID
                         GoTo Success
                     End If
                     
-                    oNS.Categories.Remove olCategory.CategoryID
+                    strTrace = "Removing category, mclId: " & mclId
+                    LogMessage strTrace, strRoutine
+                    
+                    oNS.Categories.Remove i
+                    
+                    strTrace = "Removed category, mclId: " & mclId
+                    LogMessage strTrace, strRoutine
+                    
                     bFound = True
                     Exit For
                 End If
