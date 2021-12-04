@@ -60,7 +60,7 @@ Public Property Get CurrentItem() As Object
     Dim xSelection As Outlook.Selection
     Set xSelection = Selection
     If Not xSelection Is Nothing Then
-        If xSelection.Count > 0 Then
+        If xSelection.count > 0 Then
             Set myItem = xSelection.Item(1)
         End If
     Else
@@ -282,8 +282,8 @@ Public Sub StartTaskList()
     If IsNothing(frm) Then
         strTrace = "Starting a new FME pane."
     
-        Dim Hwnd As Long
-        Hwnd = FindExplorerWindow(ActiveExplorer.Caption)
+        Dim hwnd As Long
+        hwnd = FindExplorerWindow(ActiveExplorer.Caption)
         
         Set frm = New FME_Pane
         Dim b As Boolean
@@ -436,6 +436,26 @@ Public Sub StartTimecard(Optional ByVal startDate As Date = #1/1/1970#, _
 ThrowException:
     LogMessageEx strTrace, err, strRoutine
                          
+End Sub
+
+'
+' Shows the Welcome Form
+'
+Public Sub ShowWelcome()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":ShowWelcome"
+    
+    On Error GoTo ThrowException
+    Dim frm As New frm_Welcome
+    frm.Show
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
 End Sub
 
 '

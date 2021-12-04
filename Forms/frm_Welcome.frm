@@ -34,6 +34,7 @@ Private Sub btn_Execute_Click()
 
     If f_step = 3 Then
         Unload Me
+        Call ThisOutlookSession.StartTaskList
     End If
     If f_step = 2 Then
         Status "Loading projects from Outlook categories..."
@@ -80,7 +81,8 @@ Private Sub btn_Cancel_Click()
 End Sub
 
 Private Sub btn_About_Click()
-
+    Dim f As New frm_About
+    f.Show
 End Sub
 
 ' - Constructor
