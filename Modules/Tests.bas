@@ -29,11 +29,13 @@ Public Sub Test()
     
     ' TestDataSet
     
+    Call TestSettings
    
-    Dim strStart As String
-    strStart = Format(startDate, "mm/dd/yyyy hh:mm")
+   
+    ' Dim strStart As String
+    ' strStart = Format(startDate, "mm/dd/yyyy hh:mm")
     
-    ThisOutlookSession.StartTimecard
+    ' ThisOutlookSession.StartTimecard
     
 End Sub
 
@@ -68,7 +70,7 @@ Sub GetMonitorInfo()
     'iterate output
     For Each objWmiQueryItem In objWmiQuery
         strDeviceId = objWmiQueryItem.DeviceId
-        strScreenName = objWmiQueryItem.name
+        strScreenName = objWmiQueryItem.Name
         varScreenHeight = objWmiQueryItem.ScreenHeight
         varScreenWidth = objWmiQueryItem.ScreenWidth
         Debug.Print strDeviceId
@@ -93,11 +95,11 @@ Private Sub TestGetMoveCursor()
     
     On Error GoTo ThrowException
     
-    Dim x As Integer
+    Dim X As Integer
     Dim y As Integer
     
-    If GetCursorPosition(x, y) Then
-        strTrace = "Current position = x: " & x & " y: " & y
+    If GetCursorPosition(X, y) Then
+        strTrace = "Current position = x: " & X & " y: " & y
         bTest = True
     Else
         strTrace = "An error occurred calling the Windows API (GetCursorPos)."
@@ -109,7 +111,7 @@ Private Sub TestGetMoveCursor()
     Sleep 1000
     
     strTrace = "Move the cursor 100 pixels to the right."
-    If SetCursorPosition(x + 100, y) Then
+    If SetCursorPosition(X + 100, y) Then
         strTrace = "Moved the cursor to the new coordinates."
         bTest = True
     Else
@@ -122,7 +124,7 @@ Private Sub TestGetMoveCursor()
     Sleep 1000
     
     strTrace = "Move the cursor back to the original position."
-    If SetCursorPosition(x, y) Then
+    If SetCursorPosition(X, y) Then
         strTrace = "Moved the cursor to the new coordinates."
         bTest = True
     Else
@@ -544,11 +546,11 @@ Private Sub TestGetCalendars()
         strTrace = "Folder query failed."
         bTest = False
     Else
-        If myList.Count = 0 Then
+        If myList.count = 0 Then
             strTrace = "Didn't find any Calendar folders - probably wrong."
             bTest = False
         Else
-            strTrace = "Found " & myList.Count & " calendar folders."
+            strTrace = "Found " & myList.count & " calendar folders."
         End If
     End If
     LogMessage strTrace, strRoutine
@@ -664,7 +666,7 @@ Private Sub TestGetMailFolders()
         strTrace = "Method failed."
         GoTo ThrowException
     End If
-    If mFolders.Count = 0 Then
+    If mFolders.count = 0 Then
         strTrace = "FAIL: found zero folders."
         LogMessage strTrace, strRoutine
         bTest = False
@@ -677,7 +679,7 @@ Private Sub TestGetMailFolders()
         LogMessage strTrace, strRoutine
     Next
     
-    strTrace = "Found " & mFolders.Count & " mail folders."
+    strTrace = "Found " & mFolders.count & " mail folders."
     LogMessage strTrace, strRoutine
        
     GoTo Finally
@@ -778,7 +780,7 @@ Private Sub TestDataStoreInsert()
     Dim p As New fmeProject
     p.Active = True
     p.Code = GenerateUniqueID(4)
-    p.name = "Number " & GenerateUniqueID(2) & " Project"
+    p.Name = "Number " & GenerateUniqueID(2) & " Project"
     p.Color = 8
     
     ldb.Insert p, "Project"
@@ -794,11 +796,11 @@ Private Sub TestDataSet()
     strRoutine = rootClass & ":TestDataSet"
 
     Dim ds As New DataSet
-    ds.name = "TestSet"
+    ds.Name = "TestSet"
     
     ' Table 1
     Dim dt As New DataTable
-    dt.name = "Profile"
+    dt.Name = "Profile"
     dt.Columns.Add "Name"
     dt.Columns.Add "Description"
     dt.Columns.Add "DateCreated"
@@ -814,7 +816,7 @@ Private Sub TestDataSet()
     
     ' Table 2
     Set dt = New DataTable
-    dt.name = "Address"
+    dt.Name = "Address"
     dt.Columns.Add "Name"
     dt.Columns.Add "Addr1"
     dt.Columns.Add "City"
@@ -867,7 +869,7 @@ Private Sub TestShowPopup()
     objCommandBars(strMnuName).Delete
     On Error GoTo 0
     
-    With objCommandBars.Add(name:=strMnuName, Position:=msoBarPopup)
+    With objCommandBars.Add(Name:=strMnuName, Position:=msoBarPopup)
         With .Controls.Add(msoControlButton)
             .OnAction = "Tests.ShowForm"
             .FaceId = 264
@@ -887,7 +889,7 @@ End Sub
 Private Sub TestProjectProperties()
 
     Dim p As New fmeProject
-    p.name = "Test 123"
+    p.Name = "Test 123"
     p.Code = "100110"
     ' p.SetStatusFromName ("Completed")
     p.SetStatus olTaskInProgress
@@ -973,10 +975,10 @@ Private Sub TestFolderRecursion()
         strTrace = "FAIL: Failed to find '" & strRootFolderName & " in the folder tree."
         LogMessage strTrace, strRoutine
     Else
-        strTrace = "PASS: Found " & myColl.Count & " folders in the folder tree."
+        strTrace = "PASS: Found " & myColl.count & " folders in the folder tree."
         LogMessage strTrace, strRoutine
         
-        For i = 1 To myColl.Count
+        For i = 1 To myColl.count
             Dim f As Outlook.Folder
             Set f = myColl(i)
             
@@ -1035,12 +1037,12 @@ Private Sub TestCommandBars()
     LogMessage "---- TestCommandBars", rootClass
     
     For Each objCommandBar In objCommandBars
-        LogMessage objCommandBar.name, rootClass
+        LogMessage objCommandBar.Name, rootClass
         
-        If objCommandBar.Controls.Count > 0 Then
+        If objCommandBar.Controls.count > 0 Then
             LogMessage " - Controls are:", rootClass
             For Each ctl In objCommandBar.Controls
-                LogMessage objCommandBar.name & ", control: " & ctl.Caption, rootClass
+                LogMessage objCommandBar.Name & ", control: " & ctl.Caption, rootClass
             Next ctl
         Else
             LogMessage " - no buttons found...", rootClass
@@ -1057,5 +1059,10 @@ End Sub
 Private Sub FirstTest()
     Dim dResult As VbMsgBoxResult
     dResult = MsgBox("Passed", vbCritical Or vbOKOnly, "Test: FirstTest")
+End Sub
+
+Private Sub TestSettings()
+    Dim stgs As New Settings
+    stgs.UpdateSetting_Test
 End Sub
 

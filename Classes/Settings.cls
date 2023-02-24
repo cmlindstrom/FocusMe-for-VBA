@@ -254,19 +254,46 @@ End Sub
 ''' Set Setting by name and value
 Public Sub SetSetting(ByVal nme As String, ByVal val As Variant)
 
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":SetSetting"
+    
+    On Error GoTo ThrowException
+
+    Dim bChanged As Boolean
+    bChanged = False
+
     Dim s As Setting
     Set s = GetSetting(nme)
     If Not IsNothing(s) Then
-        ' Capture new value
-        s.value = val
+        ' Check to see if value changed
+        If Not s.Compare(val) Then
+            ' Capture new value
+            s.value = val
+            
+            bChanged = True
+        End If
     Else
         ' New Setting
         Create nme, val
+        
+        bChanged = True
     End If
     
-    ' Save Settings
-    SaveSettings
-
+    If bChanged Then
+            
+        strTrace = "Setting: " & s.Name & ", value: " & s.value & " - committed for write."
+        LogMessage strTrace, strRoutine
+            
+        ' Save Settings
+        SaveSettings
+    End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
 End Sub
 
 ''' Get Setting by name
@@ -306,6 +333,11 @@ End Function
 ''' Saves the collection to the XML file
 Public Sub Save()
     SaveSettings
+End Sub
+
+''' Reload Settings from XML File
+Public Sub Reload()
+    LoadSettings
 End Sub
 
 ''' Supporting Methods
@@ -588,4 +620,81 @@ ThrowException:
     LogMessageEx strTrace, err, strRoutine
     ReadTextFile = ""
     
+End Function
+
+''' Test Methods
+
+Public Function UpdateSetting_Test() As Boolean
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":UpdateSetting_Test"
+    
+    On Error GoTo ThrowException
+    
+    strTrace = "-- Initiating Test for AutoMove setting: " & strRoutine
+    LogMessage strTrace, strRoutine
+    
+    Dim bReturn As Boolean
+    bReturn = True
+
+    Dim bTest As Boolean
+    bTest = False
+    
+    Dim bOriginal As Boolean
+    Dim bNew As Boolean
+
+    ' Establish Settings collection from XML File
+    Dim stgs As New Settings
+        
+    ' Get a setting
+    bOriginal = stgs.AutoMove
+    
+    ' Change the setting
+    bNew = Not bOriginal
+    stgs.AutoMove = bNew
+    
+    ' Commit the change
+    stgs.Save
+    
+    ' Check the setting
+    ' - check current collection
+    If stgs.AutoMove = bNew Then
+        strTrace = "PASS: New value matches value in the collection, "
+        bTest = True
+    Else
+        strTrace = "FAIL: New value not updated within the collection, "
+        bTest = False
+    End If
+    bReturn = bReturn And bTest
+    LogMessage strTrace & bTest, strRoutine
+    
+    ' Reload settings - assure XML matches collection
+    Reload
+    
+    strTrace = "Reloaded Settings from XML."
+    LogMessage strTrace, strRoutine
+    
+    ' Check if New value successfully saved into the XML
+    If stgs.AutoMove = bNew Then
+        strTrace = "PASS: New value matches value in the collection, "
+        bTest = True
+    Else
+        strTrace = "FAIL: New value not updated within the collection, "
+        bTest = False
+    End If
+    bReturn = bReturn And bTest
+    LogMessage strTrace & bTest, strRoutine
+
+    ' Undo change
+    stgs.AutoMove = bOriginal
+    stgs.Save
+
+    UpdateSetting_Test = bReturn
+    Exit Function
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    UpdateSetting_Test = False
+
 End Function
