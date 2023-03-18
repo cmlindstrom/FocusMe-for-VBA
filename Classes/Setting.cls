@@ -26,11 +26,11 @@ Public Property Get Name() As String
 End Property
 
 ' Setting Value
-Public Property Let Value(ByVal val As Variant)
+Public Property Let value(ByVal val As Variant)
     oValue = val
 End Property
-Public Property Get Value() As Variant
-    Value = oValue
+Public Property Get value() As Variant
+    value = oValue
 End Property
 
 ' Value Type
@@ -48,4 +48,34 @@ Private Sub Class_Initialize()
     strName = ""
     oValue = ""
 End Sub
+
+''' Methods
+
+''' Compares argument to setting value
+''' Returns True if equal otherwise false
+Public Function Compare(ByVal v As Variant) As Boolean
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":Compare"
+    
+    Dim bReturn As Boolean
+    bReturn = True
+    
+    On Error GoTo ThrowException
+    
+    If VarType(v) = vbString Then
+        bReturn = (StrComp(v, oValue) = 0)
+    Else
+        bReturn = (v = oValue)
+    End If
+    
+    Compare = bReturn
+    Exit Function
+        
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    Compare = False
+
+End Function
 

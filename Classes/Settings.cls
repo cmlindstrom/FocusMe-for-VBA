@@ -270,7 +270,8 @@ Public Sub SetSetting(ByVal nme As String, ByVal val As Variant)
         If Not s.Compare(val) Then
             ' Capture new value
             s.value = val
-            
+            s.ValueType = GetSettingType(val) ' Accomodate type change
+                
             bChanged = True
         End If
     Else
