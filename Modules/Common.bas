@@ -54,7 +54,7 @@ End Enum
 
 Public Type Point
    X As Long
-   y As Long
+   Y As Long
 End Type
 
 ''' Function returns True if obj is null or nothing

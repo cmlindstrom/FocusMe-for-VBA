@@ -258,7 +258,7 @@ ThrowException:
 
         Dim i As Integer
         If oNS.Categories.count > 0 Then
-            For i = 1 To oNS.Categories
+            For i = 1 To oNS.Categories.count
                 Set olCategory = oNS.Categories(i)
                 If olCategory.CategoryID = mclId Then
                     ' Check for substantive Change

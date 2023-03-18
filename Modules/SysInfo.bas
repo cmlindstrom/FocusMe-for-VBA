@@ -5,11 +5,11 @@ Attribute VB_Name = "SysInfo"
 ' DEVELOPER: J. Woolley (for wellsr.com)
 Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 Private Declare PtrSafe Function GetDeviceCaps Lib "gdi32" (ByVal hDC As LongPtr, ByVal nIndex As Long) As Long
-Private Declare PtrSafe Function GetDC Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
-Private Declare PtrSafe Function ReleaseDC Lib "user32" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr) As Long
+Private Declare PtrSafe Function GetDC Lib "user32" (ByVal hwnd As LongPtr) As LongPtr
+Private Declare PtrSafe Function ReleaseDC Lib "user32" (ByVal hwnd As LongPtr, ByVal hDC As LongPtr) As Long
 Private Declare PtrSafe Function GetActiveWindow Lib "user32" () As LongPtr
 Private Declare PtrSafe Function MonitorFromWindow Lib "user32" _
-    (ByVal hWnd As LongPtr, ByVal dwFlags As Long) As LongPtr
+    (ByVal hwnd As LongPtr, ByVal dwFlags As Long) As LongPtr
 Private Declare PtrSafe Function GetMonitorInfo Lib "user32" Alias "GetMonitorInfoA" _
     (ByVal hMonitor As LongPtr, ByRef lpMI As MONITORINFOEX) As Boolean
 Private Declare PtrSafe Function CreateDC Lib "gdi32" Alias "CreateDCA" _
@@ -21,12 +21,14 @@ Private Const MONITOR_PRIMARY           As Long = 1
 Private Const MONITOR_DEFAULTTONULL     As Long = 0
 Private Const MONITOR_DEFAULTTOPRIMARY  As Long = 1
 Private Const MONITOR_DEFAULTTONEAREST  As Long = 2
+
 Private Type RECT
     Left As Long
     Top As Long
     Right As Long
     Bottom As Long
 End Type
+
 Private Type MONITORINFOEX
    cbSize As Long
    rcMonitor As RECT
@@ -34,6 +36,7 @@ Private Type MONITORINFOEX
    dwFlags As Long
    szDevice As String * MONITOR_CCHDEVICENAME
 End Type
+
 Private Enum DevCap     ' GetDeviceCaps nIndex (video displays)
     HORZSIZE = 4        ' width in millimeters
     VERTSIZE = 6        ' height in millimeters
@@ -48,16 +51,16 @@ End Enum
 
 ''' Returns the size of the screen and number of monitors
 Public Sub GetScreenResolution(ByRef hgt As Integer, _
-                                ByRef wid As Integer, _
+                                ByRef wId As Integer, _
                         Optional ByRef n As Integer = 1)
 
     Dim strTrace As String
 
-    wid = Screen("horizontalresolution")
+    wId = Screen("horizontalresolution")
     hgt = Screen("verticalresolution")
     n = Screen("numMonitors")
 
-    strTrace = "Screen is " & wid & " pixels wide and " & hgt & " pixels tall."
+    strTrace = "Screen is " & wId & " pixels wide and " & hgt & " pixels tall."
 
 End Sub
 
@@ -88,7 +91,7 @@ Private Function Screen(Item As String) As Variant
 ' Function Returns #VALUE! for invalid Item
 
     Dim xHSizeSq As Double, xVSizeSq As Double, xPix As Double, xDot As Double
-    Dim hWnd As LongPtr, hDC As LongPtr, hMonitor As LongPtr
+    Dim hwnd As LongPtr, hDC As LongPtr, hMonitor As LongPtr
     Dim tMonitorInfo As MONITORINFOEX
     Dim nMonitors As Integer
     Dim vResult As Variant
@@ -97,29 +100,29 @@ Private Function Screen(Item As String) As Variant
     nMonitors = GetSystemMetrics(SM_CMONITORS)
     If nMonitors < 2 Then
         nMonitors = 1                                       ' in case GetSystemMetrics failed
-        hWnd = 0
+        hwnd = 0
     Else
-        hWnd = GetActiveWindow()
-        hMonitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONULL)
+        hwnd = GetActiveWindow()
+        hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL)
         If hMonitor = 0 Then
             Debug.Print "ActiveWindow does not intersect a monitor"
-            hWnd = 0
+            hwnd = 0
         Else
             tMonitorInfo.cbSize = Len(tMonitorInfo)
             If GetMonitorInfo(hMonitor, tMonitorInfo) = False Then
                 Debug.Print "GetMonitorInfo failed"
-                hWnd = 0
+                hwnd = 0
             Else
                 hDC = CreateDC(tMonitorInfo.szDevice, 0, 0, 0)
                 If hDC = 0 Then
                     Debug.Print "CreateDC failed"
-                    hWnd = 0
+                    hwnd = 0
                 End If
             End If
         End If
     End If
-    If hWnd = 0 Then
-        hDC = GetDC(hWnd)
+    If hwnd = 0 Then
+        hDC = GetDC(hwnd)
         tMonitorInfo.dwFlags = MONITOR_PRIMARY
         tMonitorInfo.szDevice = "PRIMARY" & vbNullChar
     End If
@@ -177,11 +180,56 @@ Private Function Screen(Item As String) As Variant
     Case Else                                               ' Else
         vResult = CVErr(xlErrValue)                         ' return #VALUE! error (2015)
     End Select
-    If hWnd = 0 Then
-        ReleaseDC hWnd, hDC
+    If hwnd = 0 Then
+        ReleaseDC hwnd, hDC
     Else
         DeleteDC hDC
     End If
     Screen = vResult
 End Function
+
+
+''' <summary>
+'''  This function is used to remove any offending File OS characters that can cause an error in renaming a file, i.e.
+'''       "/ ? &lt; &gt; \ : * | "
+''' </summary>
+''' <param name="FileName">Filename to evalute</param>
+''' <param name="delimeter">Replacement character, e.g. "_"</param>
+''' <returns></returns>
+''' <remarks></remarks>
+Public Function CleanFileName(ByVal FileName As String, _
+                    Optional ByVal delimeter As String = "_") As String
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = "sysInfo:CleanFileName"
+        
+    On Error GoTo ThrowException
+            
+    strTrace = "Cleaning: '" & FileName & "'."
+    LogMessage strTrace, strRoutine
+
+    Dim vTemp As String
+
+    vTemp = Replace(FileName, "/", delimeter)
+    vTemp = Replace(vTemp, "?", delimeter)
+    vTemp = Replace(vTemp, "<", delimeter)
+    vTemp = Replace(vTemp, ">", delimeter)
+    vTemp = Replace(vTemp, "\", delimeter)
+    vTemp = Replace(vTemp, ":", delimeter)
+    vTemp = Replace(vTemp, "*", delimeter)
+    vTemp = Replace(vTemp, "|", delimeter)
+    vTemp = Replace(vTemp, ".", delimeter)
+    vTemp = Replace(vTemp, """", delimeter)
+
+    CleanFileName = vTemp
+    Exit Function
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    CleanFileName = FileName
+    
+End Function
+
 

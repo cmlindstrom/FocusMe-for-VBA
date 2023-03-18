@@ -297,7 +297,7 @@ Private Sub myListView_ItemClick(ByVal Item As MSComctlLib.ListItem)
     
 End Sub
 
-Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
+Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal Y As stdole.OLE_YPOS_PIXELS)
 
     Dim strTrace As String
     strTrace = ""
@@ -315,7 +315,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
        
         ' Get the pointed to listview item
         Dim li As ListItem
-        Set li = LV_GetItemAt(X, y)
+        Set li = LV_GetItemAt(X, Y)
         If Not IsNothing(li) Then
         
             ' Select Item if not already selected
@@ -345,7 +345,10 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
             Dim xSgl As Single
             xSgl = X
             Dim ySgl As Single
-            ySgl = y
+            ySgl = Y
+            
+            ' Reload settings - to accomodate menu handling changes
+            stgs.Reload
             
             strTrace = "Present context menu."
             Dim bUseOld As Boolean
@@ -367,7 +370,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
             Call ProcessContextMenuSelection(id, t)
         
         Else
-            strTrace = "WARNING: failed to find a ListItem at the loc: (" & X & "," & y & ")."
+            strTrace = "WARNING: failed to find a ListItem at the loc: (" & X & "," & Y & ")."
             LogMessage strTrace, strRoutine
         End If
               
@@ -387,7 +390,7 @@ Private Sub myListView_OLECompleteDrag(Effect As Long)
     ' Effect = 5
 End Sub
 
-Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single)
+Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
     
     Dim strTrace As String
     Dim strRoutine As String
@@ -411,7 +414,7 @@ Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Lon
     Dim t As Outlook.TaskItem
     Set t = Nothing
     Dim li As ListItem
-    Set li = LV_GetItemAt(X, y, 20)
+    Set li = LV_GetItemAt(X, Y, 20)
     If Not IsNothing(li) Then
         ' Get selected Task
         Dim eid As String
@@ -466,13 +469,13 @@ ThrowException:
       
 End Sub
 
-Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single, State As Integer)
+Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
     
     If f_SuspendUI Then Exit Sub
     
     On Error Resume Next
     Effect = 1
-    Set myListView.DropHighlight = lv_Tasks.HitTest(X * 15, y * 20)
+    Set myListView.DropHighlight = lv_Tasks.HitTest(X * 15, Y * 20)
 End Sub
 
 ' - Constructor
@@ -2350,7 +2353,7 @@ ThrowException:
 End Sub
 
 Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
-                              ByVal y As stdole.OLE_YPOS_PIXELS, _
+                              ByVal Y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
 
@@ -2361,10 +2364,10 @@ Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
     Dim xInt As Single
     xInt = X
     Dim yInt As Single
-    yInt = y
+    yInt = Y
            
     Dim li As ListItem
-    Set li = myListView.HitTest(X * factor, y * factor)
+    Set li = myListView.HitTest(X * factor, Y * factor)
         
     Set LV_GetItemAt = li
         

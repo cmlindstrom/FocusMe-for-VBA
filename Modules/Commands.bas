@@ -139,10 +139,10 @@ Attribute VB_Name = "Commands"
         Dim myCollection As Outlook.Selection
         Set myCollection = ThisOutlookSession.Selection
              
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
             Set myItem = ThisOutlookSession.CurrentItem
             If TypeOf myItem Is Outlook.MailItem Then
                 bReturn = True
@@ -179,11 +179,11 @@ ThrowException:
     
         Dim oTask As Outlook.TaskItem
     
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
             
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
             Set myItem = ThisOutlookSession.CurrentItem
             If TypeOf myItem Is Outlook.MailItem Then
                 Dim oMail As Outlook.MailItem
@@ -244,11 +244,11 @@ Finally:
     
         Dim oTask As Outlook.TaskItem
     
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
             
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
         
             ' Create a task from the incoming Item
             Set myItem = ThisOutlookSession.CurrentItem
@@ -313,10 +313,10 @@ ThrowException:
     
         Dim oAppt As Outlook.AppointmentItem
     
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
             Set myItem = ThisOutlookSession.CurrentItem
             Set oAppt = ut.MakeAppointmentFromItem(myItem, embed, True, True)
             oAppt.Display
@@ -386,16 +386,16 @@ ThrowException:
         
         Dim ut As New Utilities
       
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
             Set myItem = ThisOutlookSession.CurrentItem
             Dim oMail As Outlook.MailItem
             Set oMail = ut.GetMessageForTask(myItem)
             If Not oMail Is Nothing Then oMail.Display
         Else
-            For i = 1 To myCollection.Count
+            For i = 1 To myCollection.count
                 Set myItem = myCollection(i)
                 ut.MoveToArchive myItem
             Next i
@@ -426,14 +426,14 @@ Finally:
         
         Dim ut As New Utilities
       
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
             Set myItem = ThisOutlookSession.CurrentItem
             ut.MoveToArchive myItem
         Else
-            For i = 1 To myCollection.Count
+            For i = 1 To myCollection.count
                 Set myItem = myCollection(i)
                 ut.MoveToArchive myItem
             Next i
@@ -466,10 +466,10 @@ Finally:
     
         Dim oJournal As Outlook.JournalItem
     
-        If myCollection.Count = 0 Then
+        If myCollection.count = 0 Then
             strTrace = "No incoming item found."
             GoTo ThrowException
-        ElseIf myCollection.Count = 1 Then
+        ElseIf myCollection.count = 1 Then
             Set myItem = ThisOutlookSession.CurrentItem
             Set oJournal = ut.MakeJournalEntryFromItem(myItem, embed, True, True)
             oJournal.Display
@@ -530,10 +530,15 @@ ThrowException:
     
     End Sub
     
-    ''' Presents timecard Form
-    Public Sub PresentTimecard()
-        ThisOutlookSession.StartTimecard
-    End Sub
+''' Presents timecard Form
+Public Sub PresentTimecard()
+    ThisOutlookSession.StartTimecard
+End Sub
+    
+''' Reset Task Pane Location
+Public Sub ResetTaskPane()
+    ThisOutlookSession.ResetTaskPaneLocation
+End Sub
     
     
 ''' Text File Manipulation - - -

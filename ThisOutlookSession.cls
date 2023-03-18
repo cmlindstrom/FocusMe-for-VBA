@@ -459,6 +459,27 @@ ThrowException:
 End Sub
 
 '
+' Resets the FME Pane to a known location
+'
+Public Sub ResetTaskPaneLocation()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":ResetTaskPaneLocation"
+    
+    On Error GoTo ThrowException
+    
+    frm.RepositionForm 10, 10
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Sub
+
+
+'
 ' Returns the Active Explorer's Selection
 '
 Public Function Selection() As Outlook.Selection

@@ -29,14 +29,112 @@ Public Sub Test()
     
     ' TestDataSet
     
-    Call TestSettings
    
-   
-    ' Dim strStart As String
-    ' strStart = Format(startDate, "mm/dd/yyyy hh:mm")
+    Dim strStart As String
+    strStart = Format(startDate, "mm/dd/yyyy hh:mm")
     
-    ' ThisOutlookSession.StartTimecard
+    ThisOutlookSession.StartTimecard
     
+End Sub
+
+Private Sub TestfmeProfile()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":TestfmeProfile"
+    
+    Dim bTest As Boolean
+    bTest = False
+    Dim bPass As Boolean
+    bPass = True
+    
+    On Error GoTo ThrowException
+    
+    Dim f_prof As fmeProfile
+    Set f_prof = New fmeProfile
+    
+    Dim cName As String
+    cName = f_prof.OutlookProfileName
+    
+    If Len(cName) > 0 Then
+        strTrace = "PASS: Found the Outlook profile."
+        bTest = True
+    Else
+        strTrace = "FAIL: Failed to load the Outlook profile information."
+        bTest = False
+    End If
+    LogMessage strTrace, strRoutine
+    bPass = bPass And bTest
+    
+    strTrace = "User: " & f_prof.User.FullName & " | "
+    strTrace = strTrace & "Outlook Profile: " & f_prof.OutlookProfileName
+    LogMessage strTrace, strRoutine
+    
+    GoTo Finally
+       
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    bPass = False
+        
+Finally:
+    strTrace = "Test disposition: " & bPass & "."
+    LogMessage strTrace, strRoutine
+
+
+End Sub
+
+Private Sub TestCleanFilePath()
+
+    Dim strTrace As String
+    Dim strRoutine As String
+    strRoutine = rootClass & ":TestCleanFilePath"
+    
+    Dim bTest As Boolean
+    bTest = False
+    Dim bPass As Boolean
+    bPass = True
+    
+    On Error GoTo ThrowException
+    
+    Dim f_prof As fmeProfile
+    Set f_prof = New fmeProfile
+    
+    Dim cName As String
+    cName = f_prof.OutlookProfileName
+    
+    Dim fName As String
+    
+    strTrace = "Attempt 1: Use Outlook Profile."
+    LogMessage strTrace, strRoutine
+    
+    fName = CleanFileName(cName, "$")
+
+    Dim filePath As String
+    filePath = Common.GetAppDataPath & "\" & fName & ".XML"
+    
+    strTrace = "Full file path: " & filePath
+    LogMessage strTrace, strRoutine
+    
+    strTrace = "Attempt 2: Use string that will break Windows: My <test> file.name / more"
+    LogMessage strTrace, strRoutine
+    
+    fName = CleanFileName("My <test> file.name / more", "$")
+    
+    filePath = Common.GetAppDataPath & "\" & fName & ".XML"
+    
+    strTrace = "Full file path: " & filePath
+    LogMessage strTrace, strRoutine
+    
+    GoTo Finally
+       
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    bPass = False
+        
+Finally:
+    strTrace = "Test disposition: " & bPass & "."
+    LogMessage strTrace, strRoutine
+
 End Sub
 
 Sub GetScreenSize()
@@ -150,7 +248,7 @@ Private Sub TestElapsedTimeFormatter()
 
     Dim strTrace As String
     Dim strRoutine As String
-    strRoutine = rootClass & ":TestBrowseFolder"
+    strRoutine = rootClass & ":TestElapsedTimeFormatter"
     
     Dim bTest As Boolean
     bTest = False
@@ -1059,10 +1157,5 @@ End Sub
 Private Sub FirstTest()
     Dim dResult As VbMsgBoxResult
     dResult = MsgBox("Passed", vbCritical Or vbOKOnly, "Test: FirstTest")
-End Sub
-
-Private Sub TestSettings()
-    Dim stgs As New Settings
-    stgs.UpdateSetting_Test
 End Sub
 
