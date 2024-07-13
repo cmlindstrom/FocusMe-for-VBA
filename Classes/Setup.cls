@@ -68,7 +68,7 @@ Public Function IndexOutlookFolders() As Integer
         strTrace = "Failed to query the Outlook dataStore folder structure."
         GoTo ThrowException
     End If
-    If fldrs.Count = 0 Then
+    If fldrs.count = 0 Then
         strTrace = "User has no folders in their folder tree."
         GoTo ThrowException
     End If
@@ -132,7 +132,7 @@ Public Function ImportProjectsFromCategories() As Integer
     Dim pm As New ProjectManager
     Dim myList As Projects
     Set myList = pm.ImportFromMCL
-    If myList.Count = 0 Then
+    If myList.count = 0 Then
         strTrace = "No projects found in the Outlook Master Category List."
         GoTo ThrowException
     End If
@@ -167,7 +167,7 @@ Public Function ImportProjectsFromCategories() As Integer
             ldb.Insert ip, "Project"
             pCnt = pCnt + 1
             
-            strTrace = "Imported Category '" & ip.Subject & " from Outlook MCL."
+            strTrace = "Imported Category '" & ip.Subject & "' from Outlook MCL into the LDB."
             LogMessage strTrace, strRoutine
             
         End If

@@ -88,6 +88,8 @@ Public Property Get CurrentView() As String
     CurrentView = tabView
 End Property
 
+
+
 ' - - Event Handlers
 
 ' - - - ProjectManager Events
@@ -95,7 +97,7 @@ End Property
 Private Sub pm_collectionUpdated()
 
     Dim strTrace As String
-    strTrace = "Items: " & pm.Items.Count & " Projects..."
+    strTrace = "Items: " & pm.Items.count & " Projects..."
     Status strTrace
 
 End Sub
@@ -105,7 +107,7 @@ End Sub
 Private Sub tm_collectionUpdated()
 
     Dim strTrace As String
-    strTrace = "Items: " & tm.Items.Count & " Tasks..."
+    strTrace = "Items: " & tm.Items.count & " Tasks..."
     Status strTrace
     
 End Sub
@@ -152,6 +154,11 @@ End Sub
 Private Sub btn_Related_Click()
     If controller = TaskManager Then tm.DisplayRelatedMail
 
+End Sub
+
+Private Sub btn_Refresh_Click()
+    If controller = TaskManager Then tm.Refresh
+    If controller = ProjectManager Then pm.Refresh
 End Sub
 
 Private Sub btn_Projects_Click()
@@ -453,7 +460,7 @@ Public Sub RecordPosition()
 
 End Sub
 
-Public Sub RepositionForm()
+Public Sub RepositionForm(Optional ByVal iX As Integer = -1, Optional ByVal iY As Integer = -1)
 
     ' Get current screen configuration
     Dim w As Integer    ' screen width
@@ -468,14 +475,21 @@ Public Sub RepositionForm()
     Dim Y As Integer
     Y = pt.Y
     
-    If X + Me.Width > w Then
-        ' last saved position, puts form off of the screen
-        If n = 1 Then
-            ' monitor may have changed since last saved position, adjust position
-            X = w - Me.Width - 10
-        Else
-            ' most likely coordinates are ok, since > 1 monitor
+    If iX = -1 Then
+        ' no incoming position specified, check for off-screen
+        If X + Me.Width > w Then
+            ' last saved position, puts form off of the screen
+            If n = 1 Then
+                ' monitor may have changed since last saved position, adjust position
+                X = w - Me.Width - 10
+            Else
+                ' most likely coordinates are ok, since > 1 monitor
+            End If
         End If
+    Else
+        ' Set position to specific arguments
+        X = iX
+        Y = iY
     End If
     
     f_origin.X = X
@@ -624,7 +638,7 @@ End Sub
 Private Sub AddListViewItem(ByVal t As Outlook.TaskItem, Optional ByVal idx As Integer = -1)
 
     ' Check the index
-    If idx < 0 Then idx = lv_Tasks.ListItems.Count + 1
+    If idx < 0 Then idx = lv_Tasks.ListItems.count + 1
 
     ' Add Item to ListView
     Dim li As ListItem
@@ -720,7 +734,7 @@ Private Function FindListViewItem(ByVal t As Outlook.TaskItem) As ListItem
     Dim retItem As ListItem
     Set retItem = Nothing
     
-    For i = 1 To lv_Tasks.ListItems.Count
+    For i = 1 To lv_Tasks.ListItems.count
         Dim li As ListItem
         Set li = lv_Tasks.ListItems(i)
         If li.key = t.EntryId Then
@@ -745,7 +759,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     strRoutine = rootClass & ":RefreshListView"
     
     ' Setup ListView Columns and Configuration
-    If lv_Tasks.ColumnHeaders.Count = 0 Then
+    If lv_Tasks.ColumnHeaders.count = 0 Then
         'Initialize the View
         Dim ch1 As ColumnHeader
         Dim ch2 As ColumnHeader
@@ -763,7 +777,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
     lv_Tasks.ListItems.Clear
     
     ' Add current class collection
-    If myList.Count > 0 Then
+    If myList.count > 0 Then
     
         ' Sort the internal list
         Dim strSort As String
@@ -774,7 +788,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
         collSort.Sort strSort, myList, sortingDirection
           
         ' Load the ListView
-        For i = 0 To myList.Count - 1
+        For i = 0 To myList.count - 1
             Dim t As Outlook.TaskItem
             Set t = myList(i)
                                  
@@ -787,7 +801,7 @@ Private Sub RefreshListView(ByVal sortOn As enuSortOn, ByVal sortDir As enuSortD
         
     End If
     
-    strTrace = "Items: " & myList.Count & " tasks..."
+    strTrace = "Items: " & myList.count & " tasks..."
     Status (strTrace)
     
 ThrowException:
@@ -835,7 +849,7 @@ Private Sub ResizeLVColumns()
     ' if scrollbar present, make space
     Dim bScrollbar As Boolean
     With lv_Tasks
-        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.Count > .Height
+        bScrollbar = (.font.SIZE + 4 + 1) * .ListItems.count > .Height
     End With
     
     If bScrollbar Then totWidth = totWidth - 15
@@ -1103,9 +1117,9 @@ Private Sub RefreshListBox()
     chkbx_x = &H2612
     
         
-    If myList.Count > 0 Then
+    If myList.count > 0 Then
        
-        For i = 0 To myList.Count - 1
+        For i = 0 To myList.count - 1
             Dim t As Outlook.TaskItem
             Set t = myList(i)
             
@@ -1131,7 +1145,7 @@ Private Sub RefreshListBox()
 
         Next
         
-        strTrace = "Items: " & myList.Count & " tasks..."
+        strTrace = "Items: " & myList.count & " tasks..."
         Status (strTrace)
 
     Else

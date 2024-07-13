@@ -49,11 +49,11 @@ Public Property Get id() As String
 End Property
 
 ''' Name or Title for the Project
-Public Property Let name(ByVal myName As String)
+Public Property Let Name(ByVal myName As String)
     f_Name = myName
 End Property
-Public Property Get name() As String
-    name = f_Name
+Public Property Get Name() As String
+    Name = f_Name
 End Property
 
 ''' Project Code - for organizing / sorting
@@ -183,7 +183,7 @@ Private Sub Class_Initialize()
     ' Defaults
     f_Name = ""
     f_Active = True
-    f_CombineTitleCode = True
+    f_CombineTitleCode = False
     f_Color = 0
     
     f_windowsfolder = ""

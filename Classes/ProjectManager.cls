@@ -149,7 +149,7 @@ Private Sub myListView_DblClick()
     Set li = myListView.SelectedItem
 
     Dim eid As String
-    eid = li.key
+    eid = DecodeProjectID(li.key)
     Dim p As fmeProject
     Set p = GetItemById(eid)
     If IsNothing(p) Then
@@ -180,7 +180,7 @@ Private Sub myListView_ItemCheck(ByVal Item As MSComctlLib.ListItem)
     On Error GoTo ThrowException
 
     Dim eid As String
-    eid = Item.key
+    eid = DecodeProjectID(Item.key)
     Dim p As fmeProject
     Set p = GetItemById(eid)
     If IsNothing(p) Then
@@ -214,7 +214,7 @@ Private Sub myListView_ItemClick(ByVal Item As MSComctlLib.ListItem)
     On Error GoTo ThrowException
 
     Dim eid As String
-    eid = Item.key
+    eid = DecodeProjectID(Item.key)
     Dim p As fmeProject
     Set p = GetItemById(eid)
     If IsNothing(p) Then
@@ -231,7 +231,7 @@ ThrowException:
     
 End Sub
 
-Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
+Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As stdole.OLE_XPOS_PIXELS, ByVal Y As stdole.OLE_YPOS_PIXELS)
 
     If f_SuspendUI Then Exit Sub
 
@@ -247,7 +247,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
         
         ' Get the pointed to listview item
         Dim li As ListItem
-        Set li = LV_GetItemAt(X, y)
+        Set li = LV_GetItemAt(X, Y)
         If Not IsNothing(li) Then
         
             ' Select Item if not already selected
@@ -256,7 +256,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
         
            ' Get selected Project
             Dim p As fmeProject
-            Set p = GetItemById(li.key)
+            Set p = GetItemById(DecodeProjectID(li.key))
             If IsNothing(p) Then
                 strTrace = "WARNING: Failed to find a selected project, id: " & li.key
                 GoTo ThrowException
@@ -272,7 +272,7 @@ Private Sub myListView_MouseDown(ByVal Button As Integer, ByVal Shift As Integer
             Dim xSgl As Single
             xSgl = X
             Dim ySgl As Single
-            ySgl = y
+            ySgl = Y
             
             strTrace = "Present context menu."
             Dim bUseWindowsMenus As Boolean
@@ -304,7 +304,7 @@ ThrowException:
     
 End Sub
 
-Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single)
+Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
 
     Dim strTrace As String
     Dim strRoutine As String
@@ -324,9 +324,9 @@ Private Sub myListView_OLEDragDrop(Data As MSComctlLib.DataObject, Effect As Lon
 
 End Sub
 
-Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, y As Single, State As Integer)
+Private Sub myListView_OLEDragOver(Data As MSComctlLib.DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
     Effect = 1
-    Set myListView.DropHighlight = myListView.HitTest(X * 15, y * 20)
+    Set myListView.DropHighlight = myListView.HitTest(X * 15, Y * 20)
 End Sub
 
 ' Project Properties form
@@ -439,6 +439,10 @@ Public Function ImportFromMCL() As Projects
     
     Set olCategories = oNS.Categories
     If olCategories.count > 0 Then
+    
+        strTrace = "Importing " & olCategories.count & " Outlook categories."
+        LogMessage strTrace, strRoutine
+    
         For Each olCategory In olCategories
             ' Create a new Project
             Set p = New fmeProject
@@ -456,6 +460,7 @@ Public Function ImportFromMCL() As Projects
             Else
                 ' Just a Name, ignore?
                 p.Name = strCatName
+                p.CombineTitleCode = False
             End If
             
             ' Capture MCL Id
@@ -467,7 +472,7 @@ Public Function ImportFromMCL() As Projects
             newList.AddItem p
             
             ' Temporary
-            If newList.count > 20 Then Exit For
+            ' If newList.count > 20 Then Exit For
             
         Next
     Else
@@ -1243,18 +1248,46 @@ Private Sub AddListViewItem(ByVal p As fmeProject, Optional ByVal idx As Integer
         GoTo ThrowException
     End If
     
+    strTrace = "Processing project: '" & p.Name & "'."
+    
+    Dim subs(1) As String
+    
+    
     ' Check the index
     If idx < 0 Then idx = myListView.ListItems.count + 1
+    
+    ' Set the key
+    Dim key As String
+    key = CodeProjectID(p.id) ' ListView keys do not accept numeric values
 
-    strTrace = "Adding Item to ListView (" & idx & "," & p.id & "," & p.Name & ")."
+    strTrace = "Adding Item to ListView (Index: " & idx & ", Key: " & key & ", Text: " & p.Name & ")."
+    LogMessage strTrace, strRoutine
+    
     Dim li As ListItem
-    Set li = myListView.ListItems.Add(idx, p.id, p.Name)
-    li.SubItems(1) = p.Code
+    Set li = myListView.ListItems.Add(idx, key, p.Name)
+    
+    strTrace = "Added listItem: " & p.Name
+    LogMessage strTrace, strRoutine
+    
+    ' Dim lisb As ListSubItem
+    If Len(p.Code) > 0 Then
+        ' Set lisb = li.ListSubItems.Add(, , p.Code, "Project Code")
+        
+        strTrace = "Adding a subItem to the listItem: " & p.Code
+        LogMessage strTrace, strRoutine
+        
+        li.SubItems(1) = p.Code
+        
+        strTrace = "Added a subItem to the listItem: " & p.Code
+        LogMessage strTrace, strRoutine
+              
+    End If
            
     ' Format the row
     FormatLVRow li, p
     
     strTrace = "Added item to ListView: " & p.Subject
+    LogMessage strTrace, strRoutine
     
     Exit Sub
     
@@ -1348,11 +1381,14 @@ Private Function FindListViewItem(ByVal p As fmeProject) As ListItem
     Dim retItem As ListItem
     Set retItem = Nothing
     
+    Dim searchKey As String
+    searchKey = CodeProjectID(p.id) ' See AddListViewItem method
+    
     Dim i As Integer
     For i = 1 To myListView.ListItems.count
         Dim li As ListItem
         Set li = myListView.ListItems(i)
-        If li.key = p.id Then
+        If li.key = searchKey Then
             Set retItem = li
             Exit For
         End If
@@ -1434,6 +1470,13 @@ End Sub
 
 Private Sub FormatLVRow(ByVal li As ListItem, ByVal p As fmeProject)
 
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":FormatLVRow"
+    
+    On Error GoTo ThrowException
+
     ' Format the checkbox
     ' li.checked = p.Complete
     
@@ -1448,6 +1491,11 @@ Private Sub FormatLVRow(ByVal li As ListItem, ByVal p As fmeProject)
     If p.Complete Then
         li.ForeColor = &HC0C0C0 ' Light Gray
     End If
+    
+    Exit Sub
+    
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
 
 End Sub
 
@@ -1490,7 +1538,7 @@ ThrowException:
 End Sub
 
 Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
-                              ByVal y As stdole.OLE_YPOS_PIXELS, _
+                              ByVal Y As stdole.OLE_YPOS_PIXELS, _
                      Optional ByVal factor As Integer = 15) As ListItem
 
 
@@ -1501,12 +1549,66 @@ Private Function LV_GetItemAt(ByVal X As stdole.OLE_XPOS_PIXELS, _
     Dim xInt As Single
     xInt = X
     Dim yInt As Single
-    yInt = y
+    yInt = Y
            
     Dim li As ListItem
-    Set li = myListView.HitTest(X * factor, y * factor)
+    Set li = myListView.HitTest(X * factor, Y * factor)
         
     Set LV_GetItemAt = li
         
+End Function
+
+Private Function CodeProjectID(ByVal pid As Variant) As Variant
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":CodeProjectID"
+    
+    If Len(pid) = 0 Then
+        strTrace = "Incoming project ID was empty or null."
+        GoTo ThrowException
+    End If
+    
+    Dim retKey As Variant
+    retKey = "A" & pid
+    
+    CodeProjectID = retKey
+    Exit Function
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+    
+End Function
+
+Private Function DecodeProjectID(ByVal key As Variant) As Variant
+
+    Dim strTrace As String
+    strTrace = "General Fault."
+    Dim strRoutine As String
+    strRoutine = rootClass & ":DecodeProjectID"
+    
+    If Len(key) = 0 Then
+        strTrace = "Incoming Key was empty or null."
+        GoTo ThrowException
+    End If
+    
+    Dim retPID As Variant
+    
+    Dim hook As Integer
+    hook = InStr(1, key, "A")
+    If hook > 0 Then
+        retPID = Right(key, Len(key) - hook)
+    Else
+        strTrace = "Failed to parse the Key: '" & key & "'."
+        GoTo ThrowException
+    End If
+    
+    DecodeProjectID = retPID
+    Exit Function
+
+ThrowException:
+    LogMessageEx strTrace, err, strRoutine
+
 End Function
 
